@@ -65,6 +65,41 @@ if (MODE === "login") {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  SESSION IMPORT (for remote servers)
+// ═══════════════════════════════════════════════════════════════
+if (MODE === "import") {
+  const source = Bun.argv[3];
+  if (!source) {
+    console.error("\n  Usage: phantom-canvas import <session.json>\n");
+    console.error("  Copy a session file from another machine:\n");
+    console.error("    # On local machine:");
+    console.error("    scp ~/.phantom-canvas/session.json user@remote:/tmp/session.json\n");
+    console.error("    # On remote server:");
+    console.error("    phantom-canvas import /tmp/session.json\n");
+    process.exit(1);
+  }
+
+  if (!existsSync(resolve(source))) {
+    console.error(`\n  File not found: ${source}\n`);
+    process.exit(1);
+  }
+
+  const data = await Bun.file(resolve(source)).text();
+  // Basic validation
+  try {
+    const parsed = JSON.parse(data);
+    if (!parsed.cookies) throw new Error("invalid format");
+  } catch {
+    console.error("\n  Invalid session file — must be a Playwright storageState JSON.\n");
+    process.exit(1);
+  }
+
+  await Bun.write(SESSION_PATH, data);
+  console.log(`\n  Session imported to ${SESSION_PATH}\n`);
+  process.exit(0);
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  GENERATE (CLI one-shot mode for agents)
 // ═══════════════════════════════════════════════════════════════
 if (MODE === "generate") {
@@ -311,10 +346,11 @@ if (MODE === "serve") {
   console.log(`
   Phantom Canvas — Your Gemini web app as a service
 
-  Usage:
-    phantom-canvas login                        Login to Google (first time)
+  Commands:
+    phantom-canvas login                         Login to Google (first time)
     phantom-canvas generate "prompt" [options]   One-shot generation (for agents)
     phantom-canvas serve [--port 8420]           Start HTTP API server
+    phantom-canvas import <session.json>         Import session from another machine
 
   Generate options:
     --ref <file>          Reference image (img2img)
@@ -329,5 +365,14 @@ if (MODE === "serve") {
     phantom-canvas generate "4 directions" --ref knight.png -o sheet.png
     phantom-canvas generate "walk cycle" --video --ref knight.png
     phantom-canvas serve --port 3000
+
+  Remote setup:
+    # On local machine (has browser):
+    phantom-canvas login
+    scp ~/.phantom-canvas/session.json user@remote:/tmp/session.json
+
+    # On remote server:
+    phantom-canvas import /tmp/session.json
+    phantom-canvas serve
 `);
 }
