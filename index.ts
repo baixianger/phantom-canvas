@@ -112,6 +112,7 @@ app.post("/generate", async (c) => {
     timeout_secs?: number;
     callback_url?: string;
     type?: "image" | "video";
+    conversation_id?: string;  // continue in same Gemini chat
   }>();
 
   if (!body.prompt) return c.json({ error: "prompt is required" }, 400);
@@ -123,6 +124,7 @@ app.post("/generate", async (c) => {
     timeoutSecs: body.timeout_secs ?? (body.type === "video" ? 300 : 180),
     callbackUrl: body.callback_url,
     type: body.type ?? "image",
+    conversationId: body.conversation_id,
   });
 
   runTask(taskId);
@@ -137,6 +139,7 @@ app.get("/task/:id", (c) => {
     task_id: task.id,
     status: task.status,
     prompt: task.input.prompt,
+    conversation_id: task.conversationId,
     images: task.images?.map((img, i) => ({
       index: i,
       path: img.path,
@@ -202,7 +205,13 @@ async function runTask(taskId: string) {
 
   try {
     const images = await browser.generateImages(task.input);
-    tasks.update(taskId, { status: "completed", images, completedAt: Date.now() });
+    const convId = browser.getConversationId();
+    tasks.update(taskId, {
+      status: "completed",
+      images,
+      conversationId: convId ?? undefined,
+      completedAt: Date.now(),
+    });
 
     if (task.input.callbackUrl) {
       fetch(task.input.callbackUrl, {

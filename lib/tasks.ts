@@ -11,6 +11,7 @@ export interface TaskInput {
   timeoutSecs: number;
   callbackUrl?: string;
   type?: MediaType;  // "image" (default) or "video"
+  conversationId?: string; // continue in same Gemini chat
 }
 
 export interface TaskMedia {
@@ -28,6 +29,7 @@ export interface Task {
   status: "queued" | "running" | "completed" | "failed";
   input: TaskInput;
   images?: TaskMedia[];  // images and/or videos
+  conversationId?: string; // Gemini chat URL for multi-turn
   error?: string;
   createdAt: number;
   completedAt?: number;

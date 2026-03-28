@@ -166,26 +166,45 @@ export class GeminiBrowser {
     }
   }
 
+  /** Get the current conversation ID from URL (e.g. /app/abc123) */
+  getConversationId(): string | null {
+    const url = this.page?.url() || "";
+    const match = url.match(/\/app\/([a-f0-9]+)/);
+    return match ? match[1] : null;
+  }
+
   private async _doGenerate(input: TaskInput): Promise<TaskImage[]> {
     const page = this.page!;
     const results: TaskImage[] = [];
     const isVideo = input.type === "video";
-    const count = isVideo ? 1 : input.numImages; // video: always 1
+    const count = isVideo ? 1 : input.numImages;
 
     for (let i = 0; i < count; i++) {
       console.log(`[GEN ${i + 1}/${count}] Starting (${isVideo ? "video" : "image"})...`);
 
-      // Navigate to new chat
-      try {
-        await page.goto(GEMINI_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      } catch {}
-      await page.waitForTimeout(8000);
+      if (input.conversationId) {
+        // Multi-turn: stay in same conversation
+        const targetUrl = `https://gemini.google.com/app/${input.conversationId}`;
+        if (!page.url().includes(input.conversationId)) {
+          try {
+            await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+          } catch {}
+          await page.waitForTimeout(5000);
+        }
+        console.log(`[GEN] Continuing conversation: ${input.conversationId}`);
+      } else {
+        // New conversation
+        try {
+          await page.goto(GEMINI_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
+        } catch {}
+        await page.waitForTimeout(8000);
+      }
 
       // Check session is still valid before generating
       await this.checkAuth();
 
-      // Upload reference images if provided
-      if (input.referenceImages?.length) {
+      // Upload reference images (only for new conversations or if explicitly provided)
+      if (input.referenceImages?.length && !input.conversationId) {
         await this._uploadImages(input.referenceImages);
       }
 
