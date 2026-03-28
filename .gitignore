@@ -1,0 +1,6 @@
+node_modules/
+output/
+sessions/
+.DS_Store
+*.log
+bun.lock
