@@ -11,6 +11,8 @@ Your app  ──HTTP──>  Phantom Canvas  ──browser──>  Gemini Web
 
 A persistent anti-detection browser ([camoufox](https://github.com/daijro/camoufox)) runs in the background, automating Gemini's web UI. You send prompts via HTTP, Phantom Canvas handles the rest — typing, uploading reference images, waiting for generation, and downloading the result.
 
+Already paying for Google AI / Gemini Advanced? Turn your subscription into your own private API — save on per-call billing while keeping the same generation quality.
+
 Built with **Bun + camoufox-js + Hono**.
 
 ## Quick start

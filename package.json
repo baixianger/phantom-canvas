@@ -1,12 +1,26 @@
 {
   "name": "phantom-canvas",
   "version": "0.2.0",
-  "description": "Anti-detection browser API for AI image/video generation via Gemini Web",
+  "description": "Your Gemini web app as a service — turn the free Gemini web interface into a programmable HTTP API for image and video generation",
   "module": "index.ts",
   "type": "module",
+  "keywords": ["gemini", "ai", "image-generation", "video-generation", "browser-automation", "camoufox", "pixel-art", "sprite", "game-assets"],
+  "author": "baixianger",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/baixianger/phantom-canvas.git"
+  },
   "bin": {
     "phantom-canvas": "cli.ts"
   },
+  "files": [
+    "index.ts",
+    "cli.ts",
+    "lib/",
+    "README.md",
+    "examples.md"
+  ],
   "scripts": {
     "start": "bun run index.ts",
     "dev": "bun run index.ts --headed",
