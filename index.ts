@@ -19,9 +19,12 @@ import { TaskQueue } from "./lib/tasks";
 const PORT = parseInt(Bun.argv.find((_, i, a) => a[i - 1] === "--port") ?? "8420");
 const HEADED = Bun.argv.includes("--headed");
 const MODE = Bun.argv[2]; // "login" or undefined (serve)
-const DATA_DIR = new URL("./data", import.meta.url).pathname;
-const SESSION_PATH = `${DATA_DIR}/session.json`;
-const OUTPUT_DIR = new URL("./output", import.meta.url).pathname;
+import { homedir } from "os";
+import { join } from "path";
+
+const DATA_DIR = join(homedir(), ".phantom-canvas");
+const SESSION_PATH = join(DATA_DIR, "session.json");
+const OUTPUT_DIR = join(DATA_DIR, "output");
 
 mkdirSync(DATA_DIR, { recursive: true });
 
@@ -66,7 +69,7 @@ if (!hasSession) {
 
   No session found. Please login first:
 
-    bun run index.ts login
+    phantom-canvas login
 
   This will open a browser for you to sign in to Google.
   The session will be saved and used automatically.

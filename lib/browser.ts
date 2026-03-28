@@ -128,7 +128,7 @@ export class GeminiBrowser {
 
     if (this.headless) {
       console.error("\n[BROWSER] Session expired! Please re-login:\n");
-      console.error("    bun run login\n");
+      console.error("    phantom-canvas login\n");
       process.exit(1);
     } else {
       console.log("[BROWSER] Session expired — please login in the browser window...");
