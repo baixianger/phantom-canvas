@@ -8,6 +8,7 @@
   "scripts": {
     "start": "bun run index.ts",
     "dev": "bun run index.ts --headed",
+    "login": "bun run index.ts login",
     "setup": "bunx camoufox-js fetch"
   },
   "devDependencies": {

@@ -91,14 +91,22 @@ export class GeminiBrowser {
       await page.waitForTimeout(3000);
     }
 
-    // Check login status — wait for manual login if needed
+    // Check login status
     if (page.url().includes("accounts.google.com")) {
-      console.log("[BROWSER] Session expired — please login in the browser window...");
-      console.log("[BROWSER] Waiting for login (up to 5 minutes)...");
-      await page.waitForURL("**/gemini.google.com/**", { timeout: 300_000 });
-      console.log("[BROWSER] Login detected! Saving session...");
-      await this.saveSession();
-      await page.waitForTimeout(5000);
+      if (this.headless) {
+        // Headless mode: can't login interactively — tell user to re-login
+        console.error("\n[BROWSER] Session expired! Please re-login:\n");
+        console.error("    bun run login\n");
+        process.exit(1);
+      } else {
+        // Headed mode: wait for user to login in the browser window
+        console.log("[BROWSER] Session expired — please login in the browser window...");
+        console.log("[BROWSER] Waiting for login (up to 5 minutes)...");
+        await page.waitForURL("**/gemini.google.com/**", { timeout: 300_000 });
+        console.log("[BROWSER] Login detected! Saving session...");
+        await this.saveSession();
+        await page.waitForTimeout(5000);
+      }
     }
 
     // Wait for input area

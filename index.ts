@@ -4,20 +4,76 @@
  * Anti-detection browser wrapped as HTTP API for AI image generation.
  * Uses Gemini Web for free image generation, no API keys needed.
  *
- * Start:  bun run index.ts [--port 8420] [--headed]
+ * Usage:
+ *   bun start                  # headless, auto-detect session
+ *   bun run dev                # headed, for debugging
+ *   bun run index.ts login     # login flow — opens browser, saves session
  */
 
 import { Hono } from "hono";
+import { existsSync, mkdirSync } from "fs";
 import { GeminiBrowser } from "./lib/browser";
 import { TaskQueue } from "./lib/tasks";
 
 // ── Config ──────────────────────────────────────────────────────
-const PORT = parseInt(Bun.env.PORT || Bun.argv.find((_, i, a) => a[i - 1] === "--port") || "8420");
-const HEADED = Bun.argv.includes("--headed") || Bun.env.HEADED === "true";
-const SESSION_PATH = Bun.env.GEMINI_SESSION || Bun.argv.find((_, i, a) => a[i - 1] === "--session") || "";
-const OUTPUT_DIR = Bun.env.OUTPUT_DIR || new URL("./output", import.meta.url).pathname;
+const PORT = parseInt(Bun.argv.find((_, i, a) => a[i - 1] === "--port") ?? "8420");
+const HEADED = Bun.argv.includes("--headed");
+const MODE = Bun.argv[2]; // "login" or undefined (serve)
+const DATA_DIR = new URL("./data", import.meta.url).pathname;
+const SESSION_PATH = `${DATA_DIR}/session.json`;
+const OUTPUT_DIR = new URL("./output", import.meta.url).pathname;
 
-// ── Init ────────────────────────────────────────────────────────
+mkdirSync(DATA_DIR, { recursive: true });
+
+// ── Login mode ──────────────────────────────────────────────────
+if (MODE === "login") {
+  console.log(`
+ ╔═══════════════════════════════════╗
+ ║  Phantom Canvas — Login           ║
+ ╚═══════════════════════════════════╝
+`);
+  console.log("[LOGIN] Starting browser...");
+
+  const browser = new GeminiBrowser("", OUTPUT_DIR, false); // always headed
+  await browser.launch();
+
+  console.log("[LOGIN] Opening Gemini — please login in the browser...\n");
+  const page = browser.getPage()!;
+  await page.goto("https://gemini.google.com/app", { waitUntil: "domcontentloaded", timeout: 60_000 }).catch(() => {});
+
+  // Wait for user confirmation via CLI
+  process.stdout.write("  Press ENTER after you have logged in > ");
+  for await (const line of console) {
+    break; // any input = confirmed
+  }
+
+  // Save session
+  await page.context().storageState({ path: SESSION_PATH });
+  console.log(`\n[LOGIN] Session saved to ${SESSION_PATH}`);
+  console.log("[LOGIN] Start the server with: bun start\n");
+  await browser.close();
+  process.exit(0);
+}
+
+// ── Server mode ─────────────────────────────────────────────────
+const hasSession = existsSync(SESSION_PATH);
+
+if (!hasSession) {
+  console.log(`
+ ╔═══════════════════════════════════╗
+ ║  Phantom Canvas                   ║
+ ╚═══════════════════════════════════╝
+
+  No session found. Please login first:
+
+    bun run index.ts login
+
+  This will open a browser for you to sign in to Google.
+  The session will be saved and used automatically.
+`);
+  process.exit(1);
+}
+
 console.log(`
  ╔═══════════════════════════════════╗
  ║  Phantom Canvas                   ║
@@ -66,9 +122,7 @@ app.post("/generate", async (c) => {
     type: body.type ?? "image",
   });
 
-  // Fire and forget
   runTask(taskId);
-
   return c.json({ task_id: taskId, status: "queued" });
 });
 
@@ -83,6 +137,7 @@ app.get("/task/:id", (c) => {
     images: task.images?.map((img, i) => ({
       index: i,
       path: img.path,
+      type: img.type,
       url: `/task/${task.id}/image/${i}`,
     })),
     error: task.error,
@@ -104,58 +159,35 @@ app.get("/task/:id/image/:index", async (c) => {
   });
 });
 
+// Session management
 app.post("/session/refresh", async (c) => {
   await browser.navigateToGemini();
   return c.json({ status: "refreshed" });
 });
 
-// Login flow: open Gemini, wait for user to login
-app.post("/session/login", async (c) => {
-  const page = browser.getPage();
-  if (!page) return c.json({ error: "no page" }, 500);
-
-  await page.goto("https://gemini.google.com/app", { waitUntil: "domcontentloaded", timeout: 30_000 }).catch(() => {});
-
-  return c.json({
-    status: "waiting_for_login",
-    message: "Please login in the browser window. After login, call POST /session/save to save.",
-  });
-});
-
-// Save current browser session to the configured path (or a custom path)
 app.post("/session/save", async (c) => {
-  const body = await c.req.json<{ path?: string }>().catch(() => ({}));
-  const savePath = body.path || SESSION_PATH;
-
-  if (!savePath) return c.json({ error: "no session path configured — pass {path} or start with --session" }, 400);
-
-  const page = browser.getPage();
-  if (!page) return c.json({ error: "no page" }, 500);
-
-  await page.context().storageState({ path: savePath });
-
-  return c.json({ status: "saved", path: savePath, url: page.url() });
+  await browser.getPage()?.context().storageState({ path: SESSION_PATH });
+  return c.json({ status: "saved", path: SESSION_PATH });
 });
 
-// Debug: evaluate JS in the browser page
+// Debug
 app.post("/debug/eval", async (c) => {
   const { script } = await c.req.json<{ script: string }>();
   const page = browser.getPage();
   if (!page) return c.json({ error: "no page" }, 500);
   try {
-    const result = await page.evaluate(script);
-    return c.json({ result });
+    return c.json({ result: await page.evaluate(script) });
   } catch (e: any) {
     return c.json({ error: e.message });
   }
 });
 
-// Debug: screenshot
 app.get("/debug/screenshot", async (c) => {
   const page = browser.getPage();
   if (!page) return c.json({ error: "no page" }, 500);
-  const buf = await page.screenshot({ type: "png" });
-  return new Response(buf, { headers: { "Content-Type": "image/png" } });
+  return new Response(await page.screenshot({ type: "png" }), {
+    headers: { "Content-Type": "image/png" },
+  });
 });
 
 // ── Task runner ─────────────────────────────────────────────────
