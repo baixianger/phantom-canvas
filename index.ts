@@ -65,6 +65,24 @@ if (MODE === "login") {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  SESSION EXPORT (copy session out for transfer)
+// ═══════════════════════════════════════════════════════════════
+if (MODE === "export") {
+  requireSession();
+  const dest = Bun.argv[3];
+  if (!dest) {
+    console.error("\n  Usage: phantom-canvas export <output-path>\n");
+    console.error("  Example:");
+    console.error("    phantom-canvas export ./session.json");
+    console.error("    scp ./session.json user@remote:/tmp/session.json\n");
+    process.exit(1);
+  }
+  await Bun.write(resolve(dest), Bun.file(SESSION_PATH));
+  console.log(`\n  Session exported to ${resolve(dest)}\n`);
+  process.exit(0);
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  SESSION IMPORT (for remote servers)
 // ═══════════════════════════════════════════════════════════════
 if (MODE === "import") {
@@ -350,7 +368,8 @@ if (MODE === "serve") {
     phantom-canvas login                         Login to Google (first time)
     phantom-canvas generate "prompt" [options]   One-shot generation (for agents)
     phantom-canvas serve [--port 8420]           Start HTTP API server
-    phantom-canvas import <session.json>         Import session from another machine
+    phantom-canvas export <file>                  Export session for transfer
+    phantom-canvas import <file>                  Import session from another machine
 
   Generate options:
     --ref <file>          Reference image (img2img)
@@ -369,7 +388,8 @@ if (MODE === "serve") {
   Remote setup:
     # On local machine (has browser):
     phantom-canvas login
-    scp ~/.phantom-canvas/session.json user@remote:/tmp/session.json
+    phantom-canvas export ./session.json
+    scp ./session.json user@remote:/tmp/session.json
 
     # On remote server:
     phantom-canvas import /tmp/session.json
