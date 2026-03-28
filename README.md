@@ -1,17 +1,17 @@
 # Phantom Canvas
 
-Anti-detection browser wrapped as an HTTP API for AI image/video generation. Uses [Gemini Web](https://gemini.google.com) through [camoufox](https://github.com/daijro/camoufox) — no API keys needed.
+**Your Gemini web app as a service.**
 
-Built with **Bun + camoufox-js + Hono**.
-
-## How it works
+Turn the free [Gemini](https://gemini.google.com) web interface into a programmable HTTP API for image and video generation. No API keys, no billing — just your Google account.
 
 ```
 Your app  ──HTTP──>  Phantom Canvas  ──browser──>  Gemini Web
                      (camoufox)                    (free tier)
 ```
 
-Phantom Canvas keeps a persistent anti-detection Firefox browser running in the background. When you send a prompt via HTTP, it types into Gemini's input, waits for the generated image/video, downloads it, and returns the result.
+A persistent anti-detection browser ([camoufox](https://github.com/daijro/camoufox)) runs in the background, automating Gemini's web UI. You send prompts via HTTP, Phantom Canvas handles the rest — typing, uploading reference images, waiting for generation, and downloading the result.
+
+Built with **Bun + camoufox-js + Hono**.
 
 ## Quick start
 
