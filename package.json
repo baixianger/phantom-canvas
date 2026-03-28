@@ -5,15 +5,17 @@
   "module": "index.ts",
   "type": "module",
   "keywords": [
+    "agent-skills",
+    "mcp-server",
     "gemini",
-    "ai",
     "image-generation",
     "video-generation",
     "browser-automation",
     "camoufox",
     "pixel-art",
-    "sprite",
-    "game-assets"
+    "game-assets",
+    "ai-agent",
+    "phantom-canvas"
   ],
   "author": "baixianger",
   "license": "MIT",

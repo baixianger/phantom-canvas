@@ -1,73 +1,57 @@
-# Phantom Canvas — AI Image/Video Generation via Gemini Web
+---
+name: phantom-canvas
+description: Generate images and videos via Gemini Web using an anti-detection browser. Supports text-to-image, img2img with reference upload, multi-turn conversation, and video generation. No API keys needed — uses your Google account session.
+metadata:
+  author: baixianger
+  version: 0.3.3
+  tags: [gemini, image-generation, video-generation, browser-automation, pixel-art, game-assets]
+  repository: https://github.com/baixianger/phantom-canvas
+allowed-tools: Bash
+---
 
-Use this skill when the user wants to generate images or videos using Phantom Canvas (the `phantom-canvas` CLI or HTTP API that wraps Gemini Web).
+# Phantom Canvas
 
-## Prerequisites
+Generate images and videos through Gemini Web. No API keys — uses a saved Google session.
+
+## Install
 
 ```bash
 bun install -g phantom-canvas
 ```
 
-If not installed, guide the user to install it first.
+## Session
 
-## Session Management
-
-Phantom Canvas requires a Google login session stored at `~/.phantom-canvas/session.json`.
-
-### Check if session exists
+Session is stored at `~/.phantom-canvas/session.json`.
 
 ```bash
-test -f ~/.phantom-canvas/session.json && echo "session exists" || echo "no session"
-```
+# Check session
+test -f ~/.phantom-canvas/session.json && echo "ready" || echo "need login"
 
-### Session expired or missing
-
-When you see any of these errors:
-- `"No session found"`
-- `"Session expired"`
-- Exit code 1 from generate/serve
-
-Tell the user:
-
-> Your Phantom Canvas session needs a refresh. Please run:
-> ```
-> phantom-canvas login
-> ```
-> This opens a browser — log into your Google account, then press Enter in the terminal.
-
-**Do NOT attempt to automate the login** — it requires human interaction with Google's auth flow.
-
-### Remote server / SSH session
-
-If the user is on a remote server without a display:
-
-```bash
-# On local machine (has browser):
+# Login (requires browser)
 phantom-canvas login
-phantom-canvas export ./session.json
-scp ./session.json user@remote:/tmp/session.json
 
-# On remote server:
-phantom-canvas import /tmp/session.json
-phantom-canvas serve
+# Remote: export from local, import on server
+phantom-canvas export ./session.json
+phantom-canvas import ./session.json
 ```
 
-Session cookies expire periodically — repeat when needed.
+When you see "Session expired" or exit code 1, tell the user to run `phantom-canvas login`. Do NOT automate login — it requires human interaction with Google auth.
 
-## CLI Mode (for agents and scripts)
+## CLI Generate (for agents and scripts)
+
+Output is JSON on stdout. Logs go to stderr.
 
 ### Text-to-Image
 
 ```bash
-phantom-canvas generate "pixel art knight, isometric, green #00FF00 background" -o knight.png
+phantom-canvas generate "pixel art knight, isometric, green #00FF00 bg" -o knight.png
 ```
 
-Output is JSON on stdout:
 ```json
-{"status":"completed","path":"/path/to/knight.png","type":"image","conversation_id":"abc123"}
+{"status":"completed","path":"knight.png","type":"image","conversation_id":"abc123"}
 ```
 
-### Image-to-Image (with reference)
+### Image-to-Image (reference upload)
 
 ```bash
 phantom-canvas generate "4 directions of this character in a 2x2 grid" --ref ./knight.png -o sheet.png
@@ -76,64 +60,59 @@ phantom-canvas generate "4 directions of this character in a 2x2 grid" --ref ./k
 ### Multi-Turn (iterative design)
 
 ```bash
-# First generation
+# Round 1
 RESULT=$(phantom-canvas generate "pixel art knight, green bg")
 CONV=$(echo $RESULT | jq -r .conversation_id)
 
-# Continue in same conversation
-phantom-canvas generate "make the sword bigger" --conversation $CONV -o refined.png
+# Round 2 — Gemini remembers the character
+phantom-canvas generate "make the sword bigger" --conversation $CONV -o v2.png
 
-# Further iteration
+# Round 3
 phantom-canvas generate "show 4 directions" --conversation $CONV -o sheet.png
 ```
 
-### Video Generation
+### Video
 
 ```bash
-phantom-canvas generate "looping walk cycle of this knight" --video --ref knight.png -o walk.mp4
+phantom-canvas generate "walk cycle animation" --video --ref knight.png -o walk.mp4
 ```
 
-Note: Video generation takes 1-2 minutes. Gemini has daily video quotas.
+Video takes 1-2 min. Gemini has daily video quotas.
 
-## Server Mode (for HTTP API consumers)
+## CLI Options
+
+| Flag | Description |
+|---|---|
+| `-o, --output <file>` | Output file path |
+| `--ref <file>` | Reference image (absolute path) |
+| `--video` | Generate video instead of image |
+| `--conversation <id>` | Continue previous conversation |
+| `--timeout <secs>` | Timeout (default: 180 image, 300 video) |
+| `--headed` | Show browser window |
+
+## HTTP API (server mode)
 
 ```bash
-# Start server (background)
-phantom-canvas serve &
-
-# Or with visible browser for debugging
-phantom-canvas serve --headed
+phantom-canvas serve [--port 8420]
 ```
-
-### API calls
 
 ```bash
 # Generate
 curl -X POST localhost:8420/generate \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "...", "reference_images": ["/path/to/ref.png"]}'
+  -d '{"prompt":"...", "reference_images":["/path/to/ref.png"], "type":"image"}'
 
 # Check status
-curl localhost:8420/task/{task_id}
+curl localhost:8420/task/{id}
 
-# Download result
-curl localhost:8420/task/{task_id}/image/0 -o result.png
+# Download
+curl localhost:8420/task/{id}/image/0 -o result.png
 ```
 
 ## Error Handling
 
-| Error | Cause | Action |
-|---|---|---|
-| Exit code 1 + "no session" | Not logged in | Run `phantom-canvas login` |
-| Exit code 1 + "session expired" | Cookies expired | Run `phantom-canvas login` |
-| Empty images array | Generation failed or wrong detection | Retry with different prompt |
-| Timeout | Gemini slow or quota hit | Increase `--timeout` or wait |
-| "Video quota" | Daily Gemini video limit | Wait until tomorrow |
-
-## Tips
-
-- Use `--headed` flag to see what the browser is doing (debugging)
-- Each `generate` call without `--conversation` starts a fresh Gemini chat
-- Multi-turn with `--conversation` keeps Gemini's visual context — better for iterative design
-- Reference images must be **absolute paths**
-- Logs go to stderr, JSON output to stdout — safe to parse programmatically
+| Exit code / Error | Action |
+|---|---|
+| "No session found" | Run `phantom-canvas login` |
+| "Session expired" | Run `phantom-canvas login` |
+| Empty images | Retry with different prompt |
+| Video quota | Wait until tomorrow |
