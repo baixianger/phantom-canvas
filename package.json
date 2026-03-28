@@ -1,10 +1,20 @@
 {
   "name": "phantom-canvas",
-  "version": "0.2.0",
-  "description": "Your Gemini web app as a service — turn the free Gemini web interface into a programmable HTTP API for image and video generation",
+  "version": "0.3.0",
+  "description": "Your Gemini web app as a service \u2014 turn the free Gemini web interface into a programmable HTTP API for image and video generation",
   "module": "index.ts",
   "type": "module",
-  "keywords": ["gemini", "ai", "image-generation", "video-generation", "browser-automation", "camoufox", "pixel-art", "sprite", "game-assets"],
+  "keywords": [
+    "gemini",
+    "ai",
+    "image-generation",
+    "video-generation",
+    "browser-automation",
+    "camoufox",
+    "pixel-art",
+    "sprite",
+    "game-assets"
+  ],
   "author": "baixianger",
   "license": "MIT",
   "repository": {
@@ -22,9 +32,10 @@
     "examples.md"
   ],
   "scripts": {
-    "start": "bun run index.ts",
-    "dev": "bun run index.ts --headed",
     "login": "bun run index.ts login",
+    "generate": "bun run index.ts generate",
+    "serve": "bun run index.ts serve",
+    "dev": "bun run index.ts serve --headed",
     "setup": "bunx camoufox-js fetch",
     "postinstall": "bunx camoufox-js fetch"
   },
