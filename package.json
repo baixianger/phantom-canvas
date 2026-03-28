@@ -1,15 +1,18 @@
 {
   "name": "phantom-canvas",
-  "version": "0.1.0",
-  "description": "Anti-detection browser API for AI image generation via Gemini Web",
+  "version": "0.2.0",
+  "description": "Anti-detection browser API for AI image/video generation via Gemini Web",
   "module": "index.ts",
   "type": "module",
-  "private": true,
+  "bin": {
+    "phantom-canvas": "cli.ts"
+  },
   "scripts": {
     "start": "bun run index.ts",
     "dev": "bun run index.ts --headed",
     "login": "bun run index.ts login",
-    "setup": "bunx camoufox-js fetch"
+    "setup": "bunx camoufox-js fetch",
+    "postinstall": "bunx camoufox-js fetch"
   },
   "devDependencies": {
     "@types/bun": "latest"
