@@ -92,22 +92,7 @@ export class GeminiBrowser {
     }
 
     // Check login status
-    if (page.url().includes("accounts.google.com")) {
-      if (this.headless) {
-        // Headless mode: can't login interactively — tell user to re-login
-        console.error("\n[BROWSER] Session expired! Please re-login:\n");
-        console.error("    bun run login\n");
-        process.exit(1);
-      } else {
-        // Headed mode: wait for user to login in the browser window
-        console.log("[BROWSER] Session expired — please login in the browser window...");
-        console.log("[BROWSER] Waiting for login (up to 5 minutes)...");
-        await page.waitForURL("**/gemini.google.com/**", { timeout: 300_000 });
-        console.log("[BROWSER] Login detected! Saving session...");
-        await this.saveSession();
-        await page.waitForTimeout(5000);
-      }
-    }
+    await this.checkAuth();
 
     // Wait for input area
     await page.waitForSelector(
@@ -116,6 +101,51 @@ export class GeminiBrowser {
     );
 
     console.log("[BROWSER] Gemini ready");
+  }
+
+  /** Check if session is still valid — exit with re-login prompt if expired */
+  private async checkAuth() {
+    const page = this.page!;
+
+    // Check 1: URL redirect to login page
+    const isLoginPage = page.url().includes("accounts.google.com");
+
+    // Check 2: Page contains "sign in" prompt from Gemini
+    let hasSignInPrompt = false;
+    if (!isLoginPage) {
+      hasSignInPrompt = await page.evaluate(() => {
+        const text = document.body?.innerText?.toLowerCase() || "";
+        return (
+          text.includes("sign in to connect") ||
+          text.includes("are you signed in") ||
+          text.includes("log in to continue") ||
+          text.includes("sign in to continue")
+        );
+      }).catch(() => false);
+    }
+
+    if (!isLoginPage && !hasSignInPrompt) return; // all good
+
+    if (this.headless) {
+      console.error("\n[BROWSER] Session expired! Please re-login:\n");
+      console.error("    bun run login\n");
+      process.exit(1);
+    } else {
+      console.log("[BROWSER] Session expired — please login in the browser window...");
+      console.log("[BROWSER] Waiting for login (up to 5 minutes)...");
+      if (isLoginPage) {
+        await page.waitForURL("**/gemini.google.com/**", { timeout: 300_000 });
+      } else {
+        // Sign-in button on Gemini page — user needs to click it
+        await page.waitForFunction(
+          () => !document.body?.innerText?.toLowerCase().includes("sign in to connect"),
+          { timeout: 300_000 }
+        );
+      }
+      console.log("[BROWSER] Login detected! Saving session...");
+      await this.saveSession();
+      await page.waitForTimeout(5000);
+    }
   }
 
   /** Save current session to disk */
@@ -150,6 +180,9 @@ export class GeminiBrowser {
         await page.goto(GEMINI_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
       } catch {}
       await page.waitForTimeout(8000);
+
+      // Check session is still valid before generating
+      await this.checkAuth();
 
       // Upload reference images if provided
       if (input.referenceImages?.length) {
