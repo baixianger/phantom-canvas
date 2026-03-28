@@ -224,4 +224,5 @@ async function runTask(taskId: string) {
 }
 
 // ── Server ──────────────────────────────────────────────────────
-export default { port: PORT, fetch: app.fetch };
+const server = Bun.serve({ port: PORT, fetch: app.fetch });
+console.log(`[SERVER] Listening on http://localhost:${server.port}`);
