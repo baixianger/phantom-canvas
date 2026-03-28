@@ -323,6 +323,22 @@ export class GeminiBrowser {
     }
   }
 
+  /** Count current generated images on the page (excluding avatars/previews) */
+  private async _countGeneratedImages(): Promise<number> {
+    return this.page!.evaluate(() => {
+      let count = 0;
+      for (const img of document.querySelectorAll("img")) {
+        if (img.naturalWidth <= 100 || img.naturalHeight <= 100) continue;
+        const src = img.src || "";
+        const alt = (img.alt || "").toLowerCase();
+        if (src.includes("googleusercontent.com/a/") || src.includes("favicon")) continue;
+        if (alt.includes("upload") || alt.includes("preview") || alt.includes("forhåndsvisning") || alt.includes("上传") || alt.includes("プレビュー")) continue;
+        count++;
+      }
+      return count;
+    });
+  }
+
   /** Wait for generated image to appear and download it */
   private async _waitAndDownloadImage(
     timeoutSecs: number,
@@ -330,26 +346,26 @@ export class GeminiBrowser {
   ): Promise<TaskImage | null> {
     const page = this.page!;
 
-    // Wait for a GENERATED image (not upload preview or avatar)
-    // Upload previews have alt containing "upload" or "Forhåndsvisning"
-    // Generated images appear as new img elements after the prompt is sent
+    // Count existing images BEFORE generation (important for multi-turn)
+    const existingCount = await this._countGeneratedImages();
+    console.log(`[GEN] Existing images on page: ${existingCount}`);
+
+    // Wait for a NEW image to appear (count must increase)
     try {
       await page.waitForFunction(
-        () => {
-          const imgs = document.querySelectorAll("img");
-          for (const img of imgs) {
-            if (img.naturalWidth > 100 && img.naturalHeight > 100) {
-              const src = img.src || "";
-              const alt = (img.alt || "").toLowerCase();
-              // Exclude avatars
-              if (src.includes("googleusercontent.com/a/") || src.includes("favicon")) continue;
-              // Exclude upload previews
-              if (alt.includes("upload") || alt.includes("preview") || alt.includes("forhåndsvisning") || alt.includes("上传") || alt.includes("プレビュー")) continue;
-              return true;
-            }
+        (prevCount: number) => {
+          let count = 0;
+          for (const img of document.querySelectorAll("img")) {
+            if (img.naturalWidth <= 100 || img.naturalHeight <= 100) continue;
+            const src = img.src || "";
+            const alt = (img.alt || "").toLowerCase();
+            if (src.includes("googleusercontent.com/a/") || src.includes("favicon")) continue;
+            if (alt.includes("upload") || alt.includes("preview") || alt.includes("forhåndsvisning")) continue;
+            count++;
           }
-          return false;
+          return count > prevCount;
         },
+        existingCount,
         { timeout: timeoutSecs * 1000 }
       );
     } catch {
@@ -374,7 +390,7 @@ export class GeminiBrowser {
       try {
         const [download] = await Promise.all([
           page.waitForEvent("download", { timeout: 15_000 }),
-          downloadBtn.first().click(),
+          downloadBtn.last().click(), // last = newest image's download button
         ]);
         await download.saveAs(outPath);
         console.log(`[GEN] Downloaded full-res: ${outPath}`);
@@ -384,22 +400,18 @@ export class GeminiBrowser {
       }
     }
 
-    // Strategy 2: Screenshot the largest GENERATED image (exclude upload previews)
+    // Strategy 2: Screenshot the LAST generated image (newest in multi-turn)
     const imgEl = await page.evaluateHandle(() => {
-      let best: HTMLImageElement | null = null;
-      let bestArea = 0;
+      let last: HTMLImageElement | null = null;
       for (const img of document.querySelectorAll("img")) {
-        const area = img.naturalWidth * img.naturalHeight;
+        if (img.naturalWidth <= 100 || img.naturalHeight <= 100) continue;
         const src = img.src || "";
         const alt = (img.alt || "").toLowerCase();
         if (src.includes("googleusercontent.com/a/") || src.includes("favicon")) continue;
         if (alt.includes("upload") || alt.includes("forhåndsvisning") || alt.includes("preview")) continue;
-        if (area > bestArea) {
-          best = img;
-          bestArea = area;
-        }
+        last = img; // keep iterating — last one is newest
       }
-      return best;
+      return last;
     });
 
     if (imgEl) {

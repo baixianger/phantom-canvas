@@ -1,6 +1,6 @@
 {
   "name": "phantom-canvas",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Your Gemini web app as a service \u2014 turn the free Gemini web interface into a programmable HTTP API for image and video generation",
   "module": "index.ts",
   "type": "module",
