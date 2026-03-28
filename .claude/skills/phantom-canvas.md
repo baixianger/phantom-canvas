@@ -40,12 +40,19 @@ Tell the user:
 ### Remote server / SSH session
 
 If the user is on a remote server without a display:
-1. Run `phantom-canvas login` on a **local machine** with a browser
-2. Copy the session file to the remote server:
-   ```bash
-   scp ~/.phantom-canvas/session.json user@remote:~/.phantom-canvas/session.json
-   ```
-3. Session cookies expire periodically — repeat when needed
+
+```bash
+# On local machine (has browser):
+phantom-canvas login
+phantom-canvas export ./session.json
+scp ./session.json user@remote:/tmp/session.json
+
+# On remote server:
+phantom-canvas import /tmp/session.json
+phantom-canvas serve
+```
+
+Session cookies expire periodically — repeat when needed.
 
 ## CLI Mode (for agents and scripts)
 
