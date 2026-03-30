@@ -6,6 +6,14 @@
 
 <p align="center"><strong>Your Gemini web app as a service.</strong></p>
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/phantom-canvas"><img src="https://img.shields.io/npm/v/phantom-canvas?color=cb3837&logo=npm" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/phantom-canvas"><img src="https://img.shields.io/npm/dm/phantom-canvas?color=cb3837" alt="npm downloads" /></a>
+  <a href="https://github.com/baixianger/phantom-canvas/blob/main/LICENSE"><img src="https://img.shields.io/github/license/baixianger/phantom-canvas" alt="license" /></a>
+  <a href="https://bun.sh"><img src="https://img.shields.io/badge/runtime-Bun-f472b6?logo=bun" alt="Bun" /></a>
+  <a href="https://github.com/daijro/camoufox"><img src="https://img.shields.io/badge/browser-Camoufox-orange?logo=firefox" alt="Camoufox" /></a>
+</p>
+
 Turn the free [Gemini](https://gemini.google.com) web interface into a programmable HTTP API for image and video generation. No API keys, no billing — just your Google account.
 
 ```
