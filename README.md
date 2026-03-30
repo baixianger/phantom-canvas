@@ -1,6 +1,10 @@
-# Phantom Canvas
+<p align="center">
+  <img src="https://raw.githubusercontent.com/baixianger/brainstorm/main/projects/phantom-canvas/logo.png" width="128" alt="Phantom Canvas logo" />
+</p>
 
-**Your Gemini web app as a service.**
+<h1 align="center">Phantom Canvas</h1>
+
+<p align="center"><strong>Your Gemini web app as a service.</strong></p>
 
 Turn the free [Gemini](https://gemini.google.com) web interface into a programmable HTTP API for image and video generation. No API keys, no billing — just your Google account.
 
@@ -19,14 +23,13 @@ Built with **Bun + camoufox-js + Hono**.
 
 ```bash
 # 1. Install
-bun install
-bun run setup     # downloads camoufox browser binary
+bun add -g phantom-canvas
 
 # 2. Login (first time only)
-bun run login     # opens browser → login to Google → press Enter in CLI
+phantom-canvas login     # opens browser → login to Google → press Enter
 
 # 3. Start server
-bun start         # headless mode, port 8420
+phantom-canvas serve     # headless mode, port 8420
 
 # 4. Generate
 curl -X POST localhost:8420/generate \

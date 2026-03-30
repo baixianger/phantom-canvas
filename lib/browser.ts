@@ -6,11 +6,23 @@
  */
 
 import { Camoufox } from "camoufox-js";
+import { CamoufoxFetcher, INSTALL_DIR } from "camoufox-js/dist/pkgman.js";
 import type { Browser, BrowserContext, Page } from "playwright-core";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readdirSync } from "fs";
 import { join } from "path";
 import type { TaskInput, TaskMedia } from "./tasks";
 type TaskImage = TaskMedia;
+
+/** Ensure camoufox browser binary is downloaded (lazy init, no postinstall needed) */
+async function ensureCamoufox() {
+  const dir = INSTALL_DIR.toString();
+  if (!existsSync(dir) || readdirSync(dir).length === 0) {
+    console.log("[SETUP] Camoufox browser not found, downloading (~80MB)...");
+    const fetcher = new CamoufoxFetcher();
+    await fetcher.install();
+    console.log("[SETUP] Camoufox ready.");
+  }
+}
 
 const GEMINI_URL = "https://gemini.google.com/app";
 
@@ -34,6 +46,7 @@ export class GeminiBrowser {
 
   /** Launch camoufox and load saved session */
   async launch() {
+    await ensureCamoufox();
     console.log(`[BROWSER] Launching camoufox (headless=${this.headless})...`);
 
     // camoufox-js uses `window` for actual window size (not Playwright's viewport)

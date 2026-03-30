@@ -58,6 +58,15 @@ if (MODE === "login") {
   process.stdout.write("  Press ENTER after you have logged in > ");
   for await (const _ of console) break;
 
+  // Verify login before saving
+  const url = page.url();
+  const isLoggedIn = url.includes("gemini.google.com") && !url.includes("accounts.google.com");
+  if (!isLoggedIn) {
+    console.error("\n  Login not detected — session NOT saved. Please try again.\n");
+    await browser.close();
+    process.exit(1);
+  }
+
   await page.context().storageState({ path: SESSION_PATH });
   console.log(`\n  Session saved to ${SESSION_PATH}\n`);
   await browser.close();
