@@ -10,6 +10,7 @@ import { CamoufoxFetcher, INSTALL_DIR } from "camoufox-js/dist/pkgman.js";
 import type { Browser, BrowserContext, Page } from "playwright-core";
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { join } from "path";
+import { platform } from "os";
 import type { TaskInput, TaskMedia } from "./tasks";
 type TaskImage = TaskMedia;
 
@@ -49,9 +50,14 @@ export class GeminiBrowser {
     await ensureCamoufox();
     console.log(`[BROWSER] Launching camoufox (headless=${this.headless})...`);
 
+    // Match fingerprint OS to actual system to avoid Google security alerts
+    const osMap: Record<string, string> = { darwin: "macos", win32: "windows", linux: "linux" };
+    const os = osMap[platform()] ?? "macos";
+
     // camoufox-js uses `window` for actual window size (not Playwright's viewport)
     const camoufoxOpts: any = {
       headless: this.headless,
+      os,
       window: [1280, 900],
       humanize: 0.5,
       enable_cache: true,
