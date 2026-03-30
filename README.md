@@ -16,10 +16,9 @@
 
 Turn the free [Gemini](https://gemini.google.com) web interface into a programmable HTTP API for image and video generation. No API keys, no billing — just your Google account.
 
-```
-Your app  ──HTTP──>  Phantom Canvas  ──browser──>  Gemini Web
-                     (camoufox)                    (free tier)
-```
+<p align="center">
+  <img src="https://raw.githubusercontent.com/baixianger/phantom-canvas/main/diagram.png" width="700" alt="Your App → HTTP → Phantom Canvas → browser → Gemini Web (your subscription)" />
+</p>
 
 A persistent anti-detection browser ([camoufox](https://github.com/daijro/camoufox)) runs in the background, automating Gemini's web UI. You send prompts via HTTP, Phantom Canvas handles the rest — typing, uploading reference images, waiting for generation, and downloading the result.
 

@@ -32,7 +32,8 @@
     "lib/",
     "README.md",
     "examples.md",
-    "logo.png"
+    "logo.png",
+    "diagram.png"
   ],
   "scripts": {
     "login": "bun run index.ts login",
