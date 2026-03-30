@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/baixianger/brainstorm/main/projects/phantom-canvas/logo.png" width="128" alt="Phantom Canvas logo" />
+  <img src="https://raw.githubusercontent.com/baixianger/phantom-canvas/main/logo.png" width="128" alt="Phantom Canvas logo" />
 </p>
 
 <h1 align="center">Phantom Canvas</h1>
