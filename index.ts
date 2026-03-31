@@ -60,9 +60,13 @@ if (MODE === "login") {
 
   // Verify login before saving
   const url = page.url();
-  const isLoggedIn = url.includes("gemini.google.com") && !url.includes("accounts.google.com");
+  const title = await page.title();
+  const isLoggedIn = url.includes("gemini.google.com")
+    && !url.includes("accounts.google.com")
+    && !title.includes("Error");
   if (!isLoggedIn) {
-    console.error("\n  Login not detected — session NOT saved. Please try again.\n");
+    const reason = title.includes("Error") ? `Server error (${title})` : "Login not detected";
+    console.error(`\n  ${reason} — session NOT saved. Please try again.\n`);
     await browser.close();
     process.exit(1);
   }
