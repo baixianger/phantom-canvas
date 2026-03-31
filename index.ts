@@ -19,6 +19,8 @@ const DATA_DIR = join(homedir(), ".phantom-canvas");
 const SESSION_PATH = join(DATA_DIR, "session.json");
 const OUTPUT_DIR = join(DATA_DIR, "output");
 const HEADED = Bun.argv.includes("--headed");
+const USE_CHROME = Bun.argv.includes("--chrome");
+const CDP_URL = Bun.argv.find((_, i, a) => a[i - 1] === "--cdp") ?? "http://127.0.0.1:9222";
 const PORT = parseInt(Bun.argv.find((_, i, a) => a[i - 1] === "--port") ?? "8420");
 
 mkdirSync(DATA_DIR, { recursive: true });
@@ -28,6 +30,7 @@ const MODE = Bun.argv[2]; // "login", "generate", "serve", or undefined
 
 // ── Helpers ─────────────────────────────────────────────────────
 function requireSession() {
+  if (USE_CHROME) return; // Chrome mode uses browser's own session
   if (!existsSync(SESSION_PATH)) {
     console.error("\n  No session found. Run first:\n\n    phantom-canvas login\n");
     process.exit(1);
@@ -46,7 +49,7 @@ if (MODE === "login") {
   console.log("\n  Phantom Canvas — Login\n");
   console.log("  Starting browser...");
 
-  const browser = new GeminiBrowser("", OUTPUT_DIR, false);
+  const browser = new GeminiBrowser("", OUTPUT_DIR, false, USE_CHROME, CDP_URL);
   await browser.launch();
 
   console.log("  Opening Gemini — please login in the browser.\n");
@@ -165,7 +168,7 @@ if (MODE === "generate") {
   const conversationId = parseArg("--conversation");
 
   console.error("[phantom-canvas] Starting browser...");
-  const browser = new GeminiBrowser(SESSION_PATH, OUTPUT_DIR, !HEADED);
+  const browser = new GeminiBrowser(SESSION_PATH, OUTPUT_DIR, !HEADED, USE_CHROME, CDP_URL);
   await browser.launch();
 
   console.error("[phantom-canvas] Navigating to Gemini...");
@@ -221,7 +224,7 @@ if (MODE === "serve") {
  ╚═══════════════════════════════════╝
 `);
 
-  const browser = new GeminiBrowser(SESSION_PATH, OUTPUT_DIR, !HEADED);
+  const browser = new GeminiBrowser(SESSION_PATH, OUTPUT_DIR, !HEADED, USE_CHROME, CDP_URL);
   const tasks = new TaskQueue();
 
   console.log("[INIT] Starting camoufox...");
@@ -391,12 +394,20 @@ if (MODE === "serve") {
     --conversation <id>   Continue previous conversation
     --timeout <secs>      Timeout (default: 180/300)
     --headed              Show browser window
+    --chrome              Use your own Chrome (bypasses Google detection)
+    --cdp <url>           Chrome DevTools URL (default: http://127.0.0.1:9222)
 
   Examples:
     phantom-canvas generate "pixel art knight, isometric, green bg"
     phantom-canvas generate "4 directions" --ref knight.png -o sheet.png
     phantom-canvas generate "walk cycle" --video --ref knight.png
     phantom-canvas serve --port 3000
+
+  Chrome mode (recommended for Google):
+    # 1. Start Chrome with debugging port:
+    open -a "Google Chrome" --args --remote-debugging-port=9222
+    # 2. Use phantom-canvas with --chrome:
+    phantom-canvas generate "your prompt" --chrome
 
   Remote setup:
     # On local machine (has browser):

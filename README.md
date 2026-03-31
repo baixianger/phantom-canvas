@@ -24,9 +24,25 @@ A persistent anti-detection browser ([camoufox](https://github.com/daijro/camouf
 
 Already paying for Google AI / Gemini Advanced? Turn your subscription into your own private API — save on per-call billing while keeping the same generation quality.
 
-Built with **Bun + camoufox-js + Hono**.
+Built with **Bun + Playwright + Hono**. Two browser backends: **Camoufox** (anti-detect Firefox) or **Chrome** (your own browser via CDP — recommended for Google).
 
 ## Quick start
+
+### Chrome mode (recommended)
+
+```bash
+# 1. Install
+bun add -g phantom-canvas
+
+# 2. Start Chrome with debugging port
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 --user-data-dir="/tmp/chrome-phantom-canvas"
+
+# 3. Login to Google in Chrome, then generate
+phantom-canvas generate "pixel art knight, isometric" --chrome
+```
+
+### Camoufox mode
 
 ```bash
 # 1. Install

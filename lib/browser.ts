@@ -26,6 +26,7 @@ async function ensureCamoufox() {
 }
 
 const GEMINI_URL = "https://gemini.google.com/app";
+const DEFAULT_CDP_URL = "http://127.0.0.1:9222";
 
 export class GeminiBrowser {
   private browser: Browser | null = null;
@@ -40,13 +41,57 @@ export class GeminiBrowser {
   constructor(
     private sessionPath: string,
     private outputDir: string,
-    private headless: boolean = true
+    private headless: boolean = true,
+    private useChrome: boolean = false,
+    private cdpUrl: string = DEFAULT_CDP_URL
   ) {
     mkdirSync(outputDir, { recursive: true });
   }
 
-  /** Launch camoufox and load saved session */
+  /** Launch browser */
   async launch() {
+    if (this.useChrome) {
+      await this._launchChrome();
+    } else {
+      await this._launchCamoufox();
+    }
+  }
+
+  /** Connect to user's Chrome via CDP (uses bun-patched playwright-core) */
+  private async _launchChrome() {
+    const { chromium } = await import("playwright-core");
+    console.log(`[BROWSER] Connecting to Chrome at ${this.cdpUrl}...`);
+
+    try {
+      this.browser = await chromium.connectOverCDP(this.cdpUrl);
+    } catch {
+      console.error(`\n  Could not connect to Chrome at ${this.cdpUrl}`);
+      console.error("  Start Chrome with remote debugging first:\n");
+      const cmds: Record<string, string> = {
+        darwin: '    /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222 --user-data-dir="/tmp/chrome-phantom-canvas"',
+        win32: '    chrome.exe --remote-debugging-port=9222 --user-data-dir="%TEMP%\\chrome-phantom-canvas"',
+        linux: '    google-chrome --remote-debugging-port=9222 --user-data-dir="/tmp/chrome-phantom-canvas"',
+      };
+      console.error(cmds[platform()] ?? cmds.linux);
+      console.error("");
+      process.exit(1);
+    }
+
+    // Use existing context (user's logged-in session)
+    const contexts = this.browser.contexts();
+    if (contexts.length > 0) {
+      this.context = contexts[0];
+      console.log("[BROWSER] Using existing Chrome context");
+    } else {
+      this.context = await this.browser.newContext();
+    }
+
+    this.page = await this.context.newPage();
+    this.ready = true;
+  }
+
+  /** Launch camoufox */
+  private async _launchCamoufox() {
     await ensureCamoufox();
     console.log(`[BROWSER] Launching camoufox (headless=${this.headless})...`);
 
@@ -551,8 +596,16 @@ export class GeminiBrowser {
   }
 
   async close() {
-    await this.saveSession();
-    await this.context?.close();
-    await this.browser?.close();
+    if (this.useChrome) {
+      await this.page?.close().catch(() => {});
+      // CDP-connected browsers support disconnect() to leave Chrome running
+      if (this.browser && "disconnect" in this.browser) {
+        (this.browser as any).disconnect();
+      }
+    } else {
+      await this.saveSession();
+      await this.context?.close();
+      await this.browser?.close();
+    }
   }
 }
