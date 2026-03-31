@@ -1,7 +1,7 @@
 {
   "name": "phantom-canvas",
-  "version": "1.0.0",
-  "description": "Your Gemini web app as a service — turn the free Gemini web interface into a programmable HTTP API for image and video generation",
+  "version": "1.0.1",
+  "description": "Your Gemini web app as a service — turn the free Gemini web interface into a programmable HTTP API for image and video generation. Supports Chrome (CDP) and Camoufox backends.",
   "module": "index.ts",
   "type": "module",
   "keywords": [
@@ -15,7 +15,8 @@
     "pixel-art",
     "game-assets",
     "ai-agent",
-    "phantom-canvas"
+    "phantom-canvas",
+    "chrome-cdp"
   ],
   "author": "baixianger",
   "license": "MIT",
