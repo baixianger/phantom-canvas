@@ -43,6 +43,33 @@ function parseArg(flag: string): string | undefined {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  CHROME (launch Chrome with debugging port)
+// ═══════════════════════════════════════════════════════════════
+if (MODE === "chrome") {
+  const { platform: plat } = await import("os");
+  const { execSync } = await import("child_process");
+  const dataDir = parseArg("--user-data-dir") ?? join(homedir(), ".phantom-canvas", "chrome-profile");
+  mkdirSync(dataDir, { recursive: true });
+
+  const cmds: Record<string, string> = {
+    darwin: `/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222 --user-data-dir="${dataDir}"`,
+    win32: `start chrome.exe --remote-debugging-port=9222 --user-data-dir="${dataDir}"`,
+    linux: `google-chrome --remote-debugging-port=9222 --user-data-dir="${dataDir}"`,
+  };
+  const cmd = cmds[plat()] ?? cmds.linux;
+
+  console.log("\n  Phantom Canvas — Chrome Mode\n");
+  console.log(`  Starting Chrome with debugging port...\n`);
+  console.log(`  Data dir: ${dataDir}\n`);
+  console.log("  Login to Google in Chrome, then use:\n");
+  console.log("    phantom-canvas generate \"your prompt\" --chrome");
+  console.log("    phantom-canvas serve --chrome\n");
+
+  execSync(cmd, { stdio: "inherit" });
+  process.exit(0);
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  LOGIN
 // ═══════════════════════════════════════════════════════════════
 if (MODE === "login") {
@@ -381,7 +408,8 @@ if (MODE === "serve") {
   Phantom Canvas — Your Gemini web app as a service
 
   Commands:
-    phantom-canvas login                         Login to Google (first time)
+    phantom-canvas chrome                        Start Chrome with debugging port
+    phantom-canvas login                         Login to Google (camoufox mode)
     phantom-canvas generate "prompt" [options]   One-shot generation (for agents)
     phantom-canvas serve [--port 8420]           Start HTTP API server
     phantom-canvas export <file>                  Export session for transfer
@@ -405,9 +433,10 @@ if (MODE === "serve") {
 
   Chrome mode (recommended for Google):
     # 1. Start Chrome with debugging port:
-    open -a "Google Chrome" --args --remote-debugging-port=9222
-    # 2. Use phantom-canvas with --chrome:
+    phantom-canvas chrome
+    # 2. Login to Google in Chrome, then:
     phantom-canvas generate "your prompt" --chrome
+    phantom-canvas serve --chrome
 
   Remote setup:
     # On local machine (has browser):
