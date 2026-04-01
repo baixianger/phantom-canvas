@@ -212,8 +212,9 @@ export class GeminiBrowser {
     }
   }
 
-  /** Save current session to disk */
+  /** Save current session to disk (no-op in Chrome mode) */
   async saveSession() {
+    if (this.useChrome) return;
     if (this.context) {
       await this.context.storageState({ path: this.sessionPath });
       console.log("[BROWSER] Session saved");
