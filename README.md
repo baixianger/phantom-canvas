@@ -50,24 +50,34 @@ phantom-canvas serve                 # HTTP API server
 # Use --camoufox to switch to anti-detect Firefox
 phantom-canvas login                 # login first
 phantom-canvas generate "prompt" --camoufox
-phantom-canvas serve --camoufox      # headless mode, port 8420
-
-# 4. Generate
-curl -X POST localhost:8420/generate \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "pixel art knight, isometric, green background"}'
+phantom-canvas serve --camoufox
 ```
 
 ## Commands
 
 | Command | Description |
 |---|---|
-| `bun run login` | Open browser, login to Google, save session |
-| `bun start` | Start API server (headless) |
-| `bun run dev` | Start API server (headed, for debugging) |
-| `bun run setup` | Download camoufox browser binary |
+| `phantom-canvas chrome` | Start Chrome with debugging port (new profile) |
+| `phantom-canvas chrome --profile` | Start Chrome with your existing profile |
+| `phantom-canvas chrome --list` | List available Chrome profiles |
+| `phantom-canvas chrome --setup` | Step-by-step setup guide |
+| `phantom-canvas login` | Login to Google (camoufox mode) |
+| `phantom-canvas generate "prompt"` | One-shot generation (Chrome by default) |
+| `phantom-canvas serve` | Start HTTP API server |
+| `phantom-canvas export <file>` | Export session for transfer |
+| `phantom-canvas import <file>` | Import session from another machine |
 
-Session is stored in `./data/session.json`. When it expires, the server will exit and prompt you to run `bun run login` again.
+### Generate options
+
+| Flag | Description |
+|---|---|
+| `--camoufox` | Use Camoufox instead of Chrome |
+| `--ref <file>` | Reference image (img2img) |
+| `--video` | Generate video instead of image |
+| `-o, --output <file>` | Output file path |
+| `--conversation <id>` | Continue previous conversation |
+| `--timeout <secs>` | Timeout (default: 180/300) |
+| `--cdp <url>` | Chrome DevTools URL (default: http://127.0.0.1:9222) |
 
 ## API
 
