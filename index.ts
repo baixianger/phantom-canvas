@@ -8,11 +8,21 @@
  */
 
 import { Hono } from "hono";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync } from "fs";
 import { homedir } from "os";
-import { join, resolve } from "path";
+import { join, resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import { GeminiBrowser } from "./lib/browser";
 import { TaskQueue } from "./lib/tasks";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function showLogo() {
+  try {
+    const logo = readFileSync(join(__dirname, "lib", "logo.ansi"), "utf-8");
+    console.log(logo);
+  } catch {}
+}
 
 // ── Config ──────────────────────────────────────────────────────
 const DATA_DIR = join(homedir(), ".phantom-canvas");
@@ -135,7 +145,8 @@ if (MODE === "chrome") {
   };
   const bin = chromeBins[plat()] ?? chromeBins.linux;
 
-  console.log("\n  Phantom Canvas — Chrome Mode\n");
+  showLogo();
+  console.log("  Phantom Canvas — Chrome Mode\n");
   if (useExisting) {
     console.log("  Using your existing Chrome profile (bookmarks, logins, extensions)");
     console.log("  ⚠  Make sure Chrome is fully closed before running this!\n");
@@ -335,12 +346,8 @@ if (MODE === "generate") {
 if (MODE === "serve") {
   requireSession();
 
-  console.log(`
- ╔═══════════════════════════════════╗
- ║  Phantom Canvas                   ║
- ║  http://localhost:${PORT}            ║
- ╚═══════════════════════════════════╝
-`);
+  showLogo();
+  console.log(`  Phantom Canvas — http://localhost:${PORT}\n`);
 
   const browser = new GeminiBrowser(SESSION_PATH, OUTPUT_DIR, !HEADED, USE_CHROME, CDP_URL);
   const tasks = new TaskQueue();
