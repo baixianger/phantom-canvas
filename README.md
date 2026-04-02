@@ -28,31 +28,29 @@ Built with **Bun + Playwright + Hono**. Two browser backends: **Camoufox** (anti
 
 ## Quick start
 
-### Chrome mode (recommended)
+### Chrome mode (default)
 
 ```bash
 # 1. Install
 bun add -g phantom-canvas
 
-# 2. Start Chrome with debugging port
-/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
-  --remote-debugging-port=9222 --user-data-dir="/tmp/chrome-phantom-canvas"
+# 2. Start Chrome (pick one)
+phantom-canvas chrome                # new profile
+phantom-canvas chrome --profile      # your existing Chrome profile (quit Chrome first)
+phantom-canvas chrome --list         # see available profiles
 
-# 3. Login to Google in Chrome, then generate
-phantom-canvas generate "pixel art knight, isometric" --chrome
+# 3. Generate (Chrome is the default — no flags needed)
+phantom-canvas generate "pixel art knight, isometric"
+phantom-canvas serve                 # HTTP API server
 ```
 
 ### Camoufox mode
 
 ```bash
-# 1. Install
-bun add -g phantom-canvas
-
-# 2. Login (first time only)
-phantom-canvas login     # opens browser → login to Google → press Enter
-
-# 3. Start server
-phantom-canvas serve     # headless mode, port 8420
+# Use --camoufox to switch to anti-detect Firefox
+phantom-canvas login                 # login first
+phantom-canvas generate "prompt" --camoufox
+phantom-canvas serve --camoufox      # headless mode, port 8420
 
 # 4. Generate
 curl -X POST localhost:8420/generate \

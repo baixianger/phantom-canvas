@@ -19,7 +19,7 @@ const DATA_DIR = join(homedir(), ".phantom-canvas");
 const SESSION_PATH = join(DATA_DIR, "session.json");
 const OUTPUT_DIR = join(DATA_DIR, "output");
 const HEADED = Bun.argv.includes("--headed");
-const USE_CHROME = Bun.argv.includes("--chrome");
+const USE_CHROME = !Bun.argv.includes("--camoufox");
 const CDP_URL = Bun.argv.find((_, i, a) => a[i - 1] === "--cdp") ?? "http://127.0.0.1:9222";
 const PORT = parseInt(Bun.argv.find((_, i, a) => a[i - 1] === "--port") ?? "8420");
 
@@ -47,25 +47,74 @@ function parseArg(flag: string): string | undefined {
 // ═══════════════════════════════════════════════════════════════
 if (MODE === "chrome") {
   const { platform: plat } = await import("os");
-  const { execSync } = await import("child_process");
-  const dataDir = parseArg("--user-data-dir") ?? join(homedir(), ".phantom-canvas", "chrome-profile");
+  const { spawn } = await import("child_process");
+
+  // --list: show available Chrome profiles
+  if (Bun.argv.includes("--list")) {
+    const defaultProfiles: Record<string, string> = {
+      darwin: join(homedir(), "Library", "Application Support", "Google", "Chrome"),
+      win32: join(homedir(), "AppData", "Local", "Google", "Chrome", "User Data"),
+      linux: join(homedir(), ".config", "google-chrome"),
+    };
+    const chromeDir = defaultProfiles[plat()] ?? defaultProfiles.linux;
+    const statePath = join(chromeDir, "Local State");
+    if (existsSync(statePath)) {
+      const state = JSON.parse(await Bun.file(statePath).text());
+      const profiles = state?.profile?.info_cache ?? {};
+      console.log("\n  Available Chrome profiles:\n");
+      for (const [dir, info] of Object.entries(profiles) as [string, any][]) {
+        const name = info.name || "Unnamed";
+        const user = info.gaia_name || info.user_name || "";
+        console.log(`    ${dir.padEnd(15)} ${name}${user ? ` (${user})` : ""}`);
+      }
+      console.log(`\n  Usage: phantom-canvas chrome --profile --profile-directory "Profile 1"\n`);
+    } else {
+      console.error("\n  Chrome profile data not found.\n");
+    }
+    process.exit(0);
+  }
+
+  // --profile: use existing Chrome profile (must quit Chrome first)
+  const useExisting = Bun.argv.includes("--profile");
+  const defaultProfiles: Record<string, string> = {
+    darwin: join(homedir(), "Library", "Application Support", "Google", "Chrome"),
+    win32: join(homedir(), "AppData", "Local", "Google", "Chrome", "User Data"),
+    linux: join(homedir(), ".config", "google-chrome"),
+  };
+  const dataDir = parseArg("--user-data-dir")
+    ?? (useExisting ? defaultProfiles[plat()] ?? defaultProfiles.linux : join(homedir(), ".phantom-canvas", "chrome-profile"));
+
   mkdirSync(dataDir, { recursive: true });
 
-  const cmds: Record<string, string> = {
-    darwin: `/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222 --user-data-dir="${dataDir}"`,
-    win32: `start chrome.exe --remote-debugging-port=9222 --user-data-dir="${dataDir}"`,
-    linux: `google-chrome --remote-debugging-port=9222 --user-data-dir="${dataDir}"`,
+  const chromeBins: Record<string, string> = {
+    darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    win32: "chrome.exe",
+    linux: "google-chrome",
   };
-  const cmd = cmds[plat()] ?? cmds.linux;
+  const bin = chromeBins[plat()] ?? chromeBins.linux;
 
   console.log("\n  Phantom Canvas — Chrome Mode\n");
-  console.log(`  Starting Chrome with debugging port...\n`);
-  console.log(`  Data dir: ${dataDir}\n`);
-  console.log("  Login to Google in Chrome, then use:\n");
+  if (useExisting) {
+    console.log("  Using your existing Chrome profile (bookmarks, logins, extensions)");
+    console.log("  ⚠  Make sure Chrome is fully closed before running this!\n");
+  }
+  console.log(`  Profile: ${dataDir}`);
+  console.log("  Port:    9222\n");
+  console.log("  After Chrome opens, use:\n");
   console.log("    phantom-canvas generate \"your prompt\" --chrome");
   console.log("    phantom-canvas serve --chrome\n");
 
-  execSync(cmd, { stdio: "inherit" });
+  const args = [
+    `--remote-debugging-port=9222`,
+    `--user-data-dir=${dataDir}`,
+  ];
+
+  // --profile-directory: select which profile to load (e.g. "Profile 1")
+  const profileDir = parseArg("--profile-directory");
+  if (profileDir) args.push(`--profile-directory=${profileDir}`);
+
+  const child = spawn(bin, args, { stdio: "inherit", detached: true });
+  child.unref();
   process.exit(0);
 }
 
@@ -408,7 +457,9 @@ if (MODE === "serve") {
   Phantom Canvas — Your Gemini web app as a service
 
   Commands:
-    phantom-canvas chrome                        Start Chrome with debugging port
+    phantom-canvas chrome                        Start Chrome (new profile)
+    phantom-canvas chrome --profile              Start Chrome (your existing profile)
+    phantom-canvas chrome --list                 List available Chrome profiles
     phantom-canvas login                         Login to Google (camoufox mode)
     phantom-canvas generate "prompt" [options]   One-shot generation (for agents)
     phantom-canvas serve [--port 8420]           Start HTTP API server
@@ -421,22 +472,26 @@ if (MODE === "serve") {
     -o, --output <file>   Output file path
     --conversation <id>   Continue previous conversation
     --timeout <secs>      Timeout (default: 180/300)
-    --headed              Show browser window
-    --chrome              Use your own Chrome (bypasses Google detection)
+    --headed              Show browser window (camoufox mode)
+    --camoufox            Use Camoufox instead of Chrome
     --cdp <url>           Chrome DevTools URL (default: http://127.0.0.1:9222)
 
   Examples:
-    phantom-canvas generate "pixel art knight, isometric, green bg"
-    phantom-canvas generate "4 directions" --ref knight.png -o sheet.png
-    phantom-canvas generate "walk cycle" --video --ref knight.png
+    # Chrome mode (default):
+    phantom-canvas chrome                        # start Chrome first
+    phantom-canvas generate "pixel art knight"   # uses Chrome by default
     phantom-canvas serve --port 3000
 
-  Chrome mode (recommended for Google):
-    # 1. Start Chrome with debugging port:
-    phantom-canvas chrome
-    # 2. Login to Google in Chrome, then:
-    phantom-canvas generate "your prompt" --chrome
-    phantom-canvas serve --chrome
+    # Camoufox mode:
+    phantom-canvas login                         # login first
+    phantom-canvas generate "prompt" --camoufox
+    phantom-canvas serve --camoufox
+
+  Chrome setup:
+    phantom-canvas chrome --list                 # list profiles
+    phantom-canvas chrome                        # new profile
+    phantom-canvas chrome --profile              # your existing profile
+    phantom-canvas chrome --profile --profile-directory "Profile 1"
 
   Remote setup:
     # On local machine (has browser):
