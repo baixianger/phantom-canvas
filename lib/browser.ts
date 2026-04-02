@@ -57,27 +57,60 @@ export class GeminiBrowser {
     }
   }
 
-  /** Connect to user's Chrome via CDP (uses bun-patched playwright-core) */
+  /** Connect to user's Chrome via CDP, auto-launching if needed */
   private async _launchChrome() {
     const { chromium } = await import("playwright-core");
-    console.log(`[BROWSER] Connecting to Chrome at ${this.cdpUrl}...`);
+    const { spawn } = await import("child_process");
+    const { homedir } = await import("os");
 
+    // Persistent profile dir — login once, reuse forever
+    const profileDir = join(homedir(), ".phantom-canvas", "chrome-profile");
+    mkdirSync(profileDir, { recursive: true });
+
+    const port = parseInt(this.cdpUrl.split(":").pop() || "9222");
+
+    // Auto-launch Chrome if not running
+    let connected = false;
     try {
-      this.browser = await chromium.connectOverCDP(this.cdpUrl);
-    } catch {
-      console.error(`\n  Could not connect to Chrome at ${this.cdpUrl}`);
-      console.error("  Start Chrome with remote debugging first:\n");
-      const cmds: Record<string, string> = {
-        darwin: '    /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222 --user-data-dir="/tmp/chrome-phantom-canvas"',
-        win32: '    chrome.exe --remote-debugging-port=9222 --user-data-dir="%TEMP%\\chrome-phantom-canvas"',
-        linux: '    google-chrome --remote-debugging-port=9222 --user-data-dir="/tmp/chrome-phantom-canvas"',
+      await fetch(this.cdpUrl + "/json/version");
+      connected = true;
+    } catch {}
+
+    if (!connected) {
+      console.log("[BROWSER] Starting Chrome...");
+      const bins: Record<string, string> = {
+        darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        win32: "chrome.exe",
+        linux: "google-chrome",
       };
-      console.error(cmds[platform()] ?? cmds.linux);
-      console.error("");
-      process.exit(1);
+      const bin = bins[platform()] ?? bins.linux;
+      const child = spawn(bin, [
+        `--remote-debugging-port=${port}`,
+        `--user-data-dir=${profileDir}`,
+      ], { stdio: "ignore", detached: true });
+      child.unref();
+
+      // Wait for Chrome to start
+      for (let i = 0; i < 15; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+          await fetch(this.cdpUrl + "/json/version");
+          connected = true;
+          break;
+        } catch {}
+      }
+
+      if (!connected) {
+        console.error("\n  Chrome failed to start. Please launch manually:\n");
+        console.error(`    ${bin.includes(" ") ? `"${bin}"` : bin} --remote-debugging-port=${port} --user-data-dir="${profileDir}"\n`);
+        process.exit(1);
+      }
     }
 
-    // Use existing context (user's logged-in session)
+    console.log(`[BROWSER] Connecting to Chrome at ${this.cdpUrl}...`);
+    this.browser = await chromium.connectOverCDP(this.cdpUrl);
+
+    // Use existing context (user's logged-in session persists in profile dir)
     const contexts = this.browser.contexts();
     if (contexts.length > 0) {
       this.context = contexts[0];

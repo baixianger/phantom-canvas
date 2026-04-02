@@ -1,6 +1,6 @@
 {
   "name": "phantom-canvas",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Your Gemini web app as a service — turn the free Gemini web interface into a programmable HTTP API for image and video generation. Supports Chrome (CDP) and Camoufox backends.",
   "module": "index.ts",
   "type": "module",

@@ -34,14 +34,12 @@ Built with **Bun + Playwright + Hono**. Two browser backends: **Camoufox** (anti
 # 1. Install
 bun add -g phantom-canvas
 
-# 2. Start Chrome (pick one)
-phantom-canvas chrome                # new profile
-phantom-canvas chrome --profile      # your existing Chrome profile (quit Chrome first)
-phantom-canvas chrome --list         # see available profiles
-
-# 3. Generate (Chrome is the default — no flags needed)
+# 2. Generate (Chrome auto-launches, no setup needed)
 phantom-canvas generate "pixel art knight, isometric"
 phantom-canvas serve                 # HTTP API server
+
+# First time: login to Google in the Chrome window that opens
+# After that, everything is automatic — your login persists
 ```
 
 ### Camoufox mode
@@ -57,10 +55,7 @@ phantom-canvas serve --camoufox
 
 | Command | Description |
 |---|---|
-| `phantom-canvas chrome` | Start Chrome with debugging port (new profile) |
-| `phantom-canvas chrome --profile` | Start Chrome with your existing profile |
-| `phantom-canvas chrome --list` | List available Chrome profiles |
-| `phantom-canvas chrome --setup` | Step-by-step setup guide |
+| `phantom-canvas chrome` | Manually start Chrome (usually not needed) |
 | `phantom-canvas login` | Login to Google (camoufox mode) |
 | `phantom-canvas generate "prompt"` | One-shot generation (Chrome by default) |
 | `phantom-canvas serve` | Start HTTP API server |
