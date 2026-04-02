@@ -49,6 +49,48 @@ if (MODE === "chrome") {
   const { platform: plat } = await import("os");
   const { spawn } = await import("child_process");
 
+  // --setup: interactive setup guide
+  if (Bun.argv.includes("--setup")) {
+    console.log(`
+  Phantom Canvas — Chrome Setup Guide
+
+  Prerequisites:
+    1. Google Chrome installed
+    2. A Google account with Gemini access
+
+  Step 1: Quit Chrome completely
+    macOS: Cmd+Q (make sure it's fully closed, not just minimized)
+    Check: No Chrome icon in the Dock with a dot underneath
+
+  Step 2: Start Chrome with debugging port
+    Option A — New profile (need to login to Google once):
+      phantom-canvas chrome
+
+    Option B — Your existing profile (already logged in):
+      phantom-canvas chrome --profile
+
+    Option C — Specific profile:
+      phantom-canvas chrome --list              # see available profiles
+      phantom-canvas chrome --profile --profile-directory "Profile 1"
+
+  Step 3: If using a new profile, login to Google
+    Navigate to https://accounts.google.com and sign in
+
+  Step 4: Use phantom-canvas (Chrome is the default)
+    phantom-canvas generate "your prompt"
+    phantom-canvas serve
+
+  Notes:
+    • Keep Chrome open while using phantom-canvas
+    • Chrome and phantom-canvas share the same browser — you'll see
+      new tabs open and close as images are generated
+    • Your existing Chrome extensions and ad blockers stay active
+    • No special privacy or cookie settings needed
+    • To go back to normal Chrome, just quit and reopen normally
+`);
+    process.exit(0);
+  }
+
   // --list: show available Chrome profiles
   if (Bun.argv.includes("--list")) {
     const defaultProfiles: Record<string, string> = {
@@ -454,12 +496,30 @@ if (MODE === "serve") {
   //  HELP (default)
   // ═════════════════════════════════════════════════════════════
   console.log(`
+            =++
+          :+*##+-==
+          :===+++=+-
+         ===+*##%#+  #
+         --*#%%%%%%+ #%# -=--::
+          =##%*:*#=*+#@%.=###*+=-.
+         :*##%*=##+#+== :+%**%%+-.
+         -*##%%%+=%#=++=-#+++*#=:
+   =:    :*##%######*%#==#*#*+*-:
+   ===-  .+###%######+:=*+*%+#+-
+    -*#=  -**++*##*+-  -#%##%#=:
+    =*%*   =***+++**: :=*#%%%*-.
+  .=###*: :+**###%%=   :--=**+-.
+  -*=-+#*=+**###%%*:      .::-:
+  -=- :+#########+:
+   :-  :=+****+=-
+
   Phantom Canvas — Your Gemini web app as a service
 
   Commands:
     phantom-canvas chrome                        Start Chrome (new profile)
     phantom-canvas chrome --profile              Start Chrome (your existing profile)
     phantom-canvas chrome --list                 List available Chrome profiles
+    phantom-canvas chrome --setup                Step-by-step setup guide
     phantom-canvas login                         Login to Google (camoufox mode)
     phantom-canvas generate "prompt" [options]   One-shot generation (for agents)
     phantom-canvas serve [--port 8420]           Start HTTP API server
