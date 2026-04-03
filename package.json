@@ -43,17 +43,16 @@
     "dev": "bun run index.ts serve --headed"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "tsx": "^4.21.0"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.12",
     "hono": "^4.12.9",
     "playwright-core": "^1.59.1",
     "ws": "^8.20.0"
-  },
-  "patchedDependencies": {
-    "playwright-core@1.58.2": "patches/playwright-core@1.58.2.patch"
   }
 }

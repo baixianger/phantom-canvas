@@ -539,7 +539,8 @@ export class GeminiBrowser {
       // Strip data URL prefix and write binary
       const base64 = b64Data.split(",")[1];
       const buffer = Buffer.from(base64, "base64");
-      await Bun.write(outPath, buffer);
+      const { writeFileSync } = await import("fs");
+      writeFileSync(outPath, buffer);
       console.log(`[GEN] Video saved: ${outPath} (${(buffer.length / 1024 / 1024).toFixed(1)}MB)`);
 
       return { path: outPath, type: "video" as const, mimeType: "video/mp4" };

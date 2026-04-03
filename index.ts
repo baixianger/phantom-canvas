@@ -8,7 +8,7 @@
  */
 
 import { Hono } from "hono";
-import { mkdirSync, readFileSync } from "fs";
+import { mkdirSync, readFileSync, copyFileSync } from "fs";
 import { homedir } from "os";
 import { join, resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -27,19 +27,19 @@ function showLogo() {
 // ── Config ──────────────────────────────────────────────────────
 const DATA_DIR = join(homedir(), ".phantom-canvas");
 const OUTPUT_DIR = join(DATA_DIR, "output");
-const HEADED = Bun.argv.includes("--headed");
-const CDP_URL = Bun.argv.find((_, i, a) => a[i - 1] === "--cdp") ?? "http://127.0.0.1:9222";
-const PORT = parseInt(Bun.argv.find((_, i, a) => a[i - 1] === "--port") ?? "8420");
+const HEADED = process.argv.includes("--headed");
+const CDP_URL = process.argv.find((_, i, a) => a[i - 1] === "--cdp") ?? "http://127.0.0.1:9222";
+const PORT = parseInt(process.argv.find((_, i, a) => a[i - 1] === "--port") ?? "8420");
 
 mkdirSync(DATA_DIR, { recursive: true });
 mkdirSync(OUTPUT_DIR, { recursive: true });
 
-const MODE = Bun.argv[2]; // "login", "generate", "serve", or undefined
+const MODE = process.argv[2]; // "login", "generate", "serve", or undefined
 
 // ── Helpers ─────────────────────────────────────────────────────
 function parseArg(flag: string): string | undefined {
-  const i = Bun.argv.indexOf(flag);
-  return i !== -1 && i + 1 < Bun.argv.length ? Bun.argv[i + 1] : undefined;
+  const i = process.argv.indexOf(flag);
+  return i !== -1 && i + 1 < process.argv.length ? process.argv[i + 1] : undefined;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -81,7 +81,7 @@ if (MODE === "generate") {
 
 
   // Parse CLI args
-  const prompt = Bun.argv[3];
+  const prompt = process.argv[3];
   if (!prompt || prompt.startsWith("-")) {
     console.error(`
   Usage: phantom-canvas generate "your prompt" [options]
@@ -103,7 +103,7 @@ if (MODE === "generate") {
   }
 
   const refImage = parseArg("--ref");
-  const isVideo = Bun.argv.includes("--video");
+  const isVideo = process.argv.includes("--video");
   const outputFile = parseArg("--output") || parseArg("-o");
   const timeout = parseInt(parseArg("--timeout") ?? (isVideo ? "300" : "180"));
   const conversationId = parseArg("--conversation");
@@ -137,7 +137,7 @@ if (MODE === "generate") {
   let finalPath = results[0].path;
   if (outputFile) {
     const outPath = resolve(outputFile);
-    await Bun.write(outPath, Bun.file(finalPath));
+    copyFileSync(finalPath, outPath);
     finalPath = outPath;
   }
 
@@ -237,7 +237,8 @@ if (MODE === "serve") {
     const img = task.images?.[parseInt(c.req.param("index"))];
     if (!img) return c.json({ error: "image not found" }, 404);
 
-    return new Response(Bun.file(img.path), {
+    const data = readFileSync(img.path);
+    return new Response(data, {
       headers: { "Content-Type": img.mimeType || "image/png" },
     });
   });
@@ -274,7 +275,7 @@ if (MODE === "serve") {
   // ── Task runner ───────────────────────────────────────────────
   async function runTask(taskId: string) {
     const task = tasks.get(taskId)!;
-    while (browser.busy) await Bun.sleep(1000);
+    while (browser.busy) await new Promise(r => setTimeout(r, 1000));
 
     tasks.update(taskId, { status: "running" });
 
@@ -307,31 +308,22 @@ if (MODE === "serve") {
     }
   }
 
-  const server = Bun.serve({ port: PORT, fetch: app.fetch });
-  console.log(`[SERVER] Listening on http://localhost:${server.port}`);
+  if (typeof globalThis.Bun !== "undefined") {
+    const server = Bun.serve({ port: PORT, fetch: app.fetch });
+    console.log(`[SERVER] Listening on http://localhost:${server.port}`);
+  } else {
+    const { serve } = await import("@hono/node-server");
+    serve({ fetch: app.fetch, port: PORT }, (info) => {
+      console.log(`[SERVER] Listening on http://localhost:${info.port}`);
+    });
+  }
 
 } else {
   // ═════════════════════════════════════════════════════════════
   //  HELP (default)
   // ═════════════════════════════════════════════════════════════
+  showLogo();
   console.log(`
-            =++
-          :+*##+-==
-          :===+++=+-
-         ===+*##%#+  #
-         --*#%%%%%%+ #%# -=--::
-          =##%*:*#=*+#@%.=###*+=-.
-         :*##%*=##+#+== :+%**%%+-.
-         -*##%%%+=%#=++=-#+++*#=:
-   =:    :*##%######*%#==#*#*+*-:
-   ===-  .+###%######+:=*+*%+#+-
-    -*#=  -**++*##*+-  -#%##%#=:
-    =*%*   =***+++**: :=*#%%%*-.
-  .=###*: :+**###%%=   :--=**+-.
-  -*=-+#*=+**###%%*:      .::-:
-  -=- :+#########+:
-   :-  :=+****+=-
-
   Phantom Canvas — Your Gemini web app as a service
 
   Commands:
