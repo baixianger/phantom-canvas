@@ -335,24 +335,54 @@ class GeminiBrowser {
       try {
         await lastImg.hover();
       } catch {}
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(2000);
     }
-    const downloadBtn = page.locator('button[aria-label*="ownload"], button[aria-label*="hent"], button[aria-label*="下载"]');
-    if (await downloadBtn.count() > 0) {
+    const downloadSel = 'button[aria-label*="ownload"], button[aria-label*="hent"], button[aria-label*="下载"]';
+    let dlCount = await page.locator(downloadSel).count();
+    console.log(`[GEN] Download buttons found: ${dlCount}`);
+    if (dlCount === 0 && lastImg) {
       try {
-        const btn = downloadBtn.last();
-        await btn.scrollIntoViewIfNeeded();
-        await btn.hover();
-        await page.waitForTimeout(500);
-        const [download] = await Promise.all([
-          page.waitForEvent("download", { timeout: 15000 }),
-          btn.click({ force: true })
-        ]);
-        await download.saveAs(outPath);
-        console.log(`[GEN] Downloaded full-res: ${outPath}`);
-        return { path: outPath, type: "image", mimeType: "image/png" };
-      } catch {
-        console.log("[GEN] Download button failed, falling back to screenshot");
+        await lastImg.click();
+      } catch {}
+      await page.waitForTimeout(2000);
+      dlCount = await page.locator(downloadSel).count();
+      console.log(`[GEN] After image click, download buttons: ${dlCount}`);
+    }
+    if (dlCount > 0) {
+      try {
+        const btn = page.locator(downloadSel).last();
+        const label = await btn.getAttribute("aria-label");
+        console.log(`[GEN] Clicking download: "${label}"`);
+        const blobData = await page.evaluate(() => {
+          let target = null;
+          for (const img of document.querySelectorAll("img")) {
+            if (img.naturalWidth <= 100 || img.naturalHeight <= 100)
+              continue;
+            const src = img.src || "";
+            if (src.includes("googleusercontent.com/a/") || src.includes("favicon"))
+              continue;
+            const alt = (img.alt || "").toLowerCase();
+            if (alt.includes("upload") || alt.includes("preview"))
+              continue;
+            target = img;
+          }
+          if (!target)
+            return null;
+          const canvas = document.createElement("canvas");
+          canvas.width = target.naturalWidth;
+          canvas.height = target.naturalHeight;
+          canvas.getContext("2d").drawImage(target, 0, 0);
+          return canvas.toDataURL("image/png");
+        });
+        if (blobData) {
+          const base64 = blobData.split(",")[1];
+          const { writeFileSync } = await import("fs");
+          writeFileSync(outPath, Buffer.from(base64, "base64"));
+          console.log(`[GEN] Downloaded full-res via blob: ${outPath}`);
+          return { path: outPath, type: "image", mimeType: "image/png" };
+        }
+      } catch (e) {
+        console.log(`[GEN] Download failed: ${e.message?.slice(0, 80)}`);
       }
     }
     const imgEl = await page.evaluateHandle(() => {
@@ -725,15 +755,10 @@ if (MODE === "serve") {
       console.error(`[FAIL] Task ${taskId}:`, err.message);
     }
   }
-  if (typeof globalThis.Bun !== "undefined") {
-    const server = Bun.serve({ port: PORT, fetch: app.fetch });
-    console.log(`[SERVER] Listening on http://localhost:${server.port}`);
-  } else {
-    const { serve } = await import("@hono/node-server");
-    serve({ fetch: app.fetch, port: PORT }, (info) => {
-      console.log(`[SERVER] Listening on http://localhost:${info.port}`);
-    });
-  }
+  const { serve } = await import("@hono/node-server");
+  serve({ fetch: app.fetch, port: PORT }, (info) => {
+    console.log(`[SERVER] Listening on http://localhost:${info.port}`);
+  });
 } else {
   showLogo();
   console.log(`

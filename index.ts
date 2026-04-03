@@ -307,15 +307,10 @@ if (MODE === "serve") {
     }
   }
 
-  if (typeof globalThis.Bun !== "undefined") {
-    const server = Bun.serve({ port: PORT, fetch: app.fetch });
-    console.log(`[SERVER] Listening on http://localhost:${server.port}`);
-  } else {
-    const { serve } = await import("@hono/node-server");
-    serve({ fetch: app.fetch, port: PORT }, (info) => {
-      console.log(`[SERVER] Listening on http://localhost:${info.port}`);
-    });
-  }
+  const { serve } = await import("@hono/node-server");
+  serve({ fetch: app.fetch, port: PORT }, (info) => {
+    console.log(`[SERVER] Listening on http://localhost:${info.port}`);
+  });
 
 } else {
   // ═════════════════════════════════════════════════════════════

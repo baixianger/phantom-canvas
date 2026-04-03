@@ -37,9 +37,9 @@
   ],
   "scripts": {
     "build": "bun build index.ts --outdir dist --target node --external playwright-core --external ws --external @hono/node-server --external hono",
-    "generate": "bun run index.ts generate",
-    "serve": "bun run index.ts serve",
-    "dev": "bun run index.ts serve --headed"
+    "generate": "node --import tsx index.ts generate",
+    "serve": "node --import tsx index.ts serve",
+    "dev": "node --import tsx index.ts serve --headed"
   },
   "devDependencies": {
     "@types/bun": "latest",
