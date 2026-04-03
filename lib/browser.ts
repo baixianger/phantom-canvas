@@ -66,10 +66,12 @@ export class GeminiBrowser {
         linux: "google-chrome",
       };
       const bin = bins[platform()] ?? bins.linux;
-      const child = spawn(bin, [
+      const args = [
         `--remote-debugging-port=${port}`,
         `--user-data-dir=${profileDir}`,
-      ], { stdio: "ignore", detached: true });
+      ];
+      if (this.headless) args.push("--headless=new");
+      const child = spawn(bin, args, { stdio: "ignore", detached: true });
       child.unref();
 
       // Wait for Chrome to start
