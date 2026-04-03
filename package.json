@@ -24,20 +24,19 @@
     "url": "https://github.com/baixianger/phantom-canvas.git"
   },
   "bin": {
-    "phantom-canvas": "cli.ts"
+    "phantom-canvas": "cli.js"
   },
   "files": [
-    "index.ts",
-    "cli.ts",
+    "cli.js",
+    "dist/",
     "lib/",
     "README.md",
     "examples.md",
     "logo.png",
-    "diagram.png",
-    "patches/"
+    "diagram.png"
   ],
   "scripts": {
-    "login": "bun run index.ts login",
+    "build": "bun build index.ts --outdir dist --target node --external playwright-core --external ws --external @hono/node-server --external hono",
     "generate": "bun run index.ts generate",
     "serve": "bun run index.ts serve",
     "dev": "bun run index.ts serve --headed"

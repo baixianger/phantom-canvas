@@ -18,10 +18,9 @@ import { TaskQueue } from "./lib/tasks";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function showLogo() {
-  try {
-    const logo = readFileSync(join(__dirname, "lib", "logo.ansi"), "utf-8");
-    console.log(logo);
-  } catch {}
+  for (const base of [__dirname, join(__dirname, "..")]) {
+    try { console.log(readFileSync(join(base, "lib", "logo.ansi"), "utf-8")); return; } catch {}
+  }
 }
 
 // ── Config ──────────────────────────────────────────────────────
