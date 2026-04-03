@@ -8,7 +8,7 @@
  */
 
 import { Hono } from "hono";
-import { existsSync, mkdirSync, readFileSync } from "fs";
+import { mkdirSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { join, resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -26,10 +26,8 @@ function showLogo() {
 
 // ── Config ──────────────────────────────────────────────────────
 const DATA_DIR = join(homedir(), ".phantom-canvas");
-const SESSION_PATH = join(DATA_DIR, "session.json");
 const OUTPUT_DIR = join(DATA_DIR, "output");
 const HEADED = Bun.argv.includes("--headed");
-const USE_CHROME = !Bun.argv.includes("--camoufox");
 const CDP_URL = Bun.argv.find((_, i, a) => a[i - 1] === "--cdp") ?? "http://127.0.0.1:9222";
 const PORT = parseInt(Bun.argv.find((_, i, a) => a[i - 1] === "--port") ?? "8420");
 
@@ -39,14 +37,6 @@ mkdirSync(OUTPUT_DIR, { recursive: true });
 const MODE = Bun.argv[2]; // "login", "generate", "serve", or undefined
 
 // ── Helpers ─────────────────────────────────────────────────────
-function requireSession() {
-  if (USE_CHROME) return; // Chrome mode uses browser's own session
-  if (!existsSync(SESSION_PATH)) {
-    console.error("\n  No session found. Run first:\n\n    phantom-canvas login\n");
-    process.exit(1);
-  }
-}
-
 function parseArg(flag: string): string | undefined {
   const i = Bun.argv.indexOf(flag);
   return i !== -1 && i + 1 < Bun.argv.length ? Bun.argv[i + 1] : undefined;
@@ -85,101 +75,10 @@ if (MODE === "chrome") {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  LOGIN
-// ═══════════════════════════════════════════════════════════════
-if (MODE === "login") {
-  console.log("\n  Phantom Canvas — Login\n");
-  console.log("  Starting browser...");
-
-  const browser = new GeminiBrowser("", OUTPUT_DIR, false, USE_CHROME, CDP_URL);
-  await browser.launch();
-
-  console.log("  Opening Gemini — please login in the browser.\n");
-  const page = browser.getPage()!;
-  await page.goto("https://gemini.google.com/app", {
-    waitUntil: "domcontentloaded", timeout: 60_000,
-  }).catch(() => {});
-
-  process.stdout.write("  Press ENTER after you have logged in > ");
-  for await (const _ of console) break;
-
-  // Verify login before saving
-  const url = page.url();
-  const title = await page.title();
-  const isLoggedIn = url.includes("gemini.google.com")
-    && !url.includes("accounts.google.com")
-    && !title.includes("Error");
-  if (!isLoggedIn) {
-    const reason = title.includes("Error") ? `Server error (${title})` : "Login not detected";
-    console.error(`\n  ${reason} — session NOT saved. Please try again.\n`);
-    await browser.close();
-    process.exit(1);
-  }
-
-  await page.context().storageState({ path: SESSION_PATH });
-  console.log(`\n  Session saved to ${SESSION_PATH}\n`);
-  await browser.close();
-  process.exit(0);
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  SESSION EXPORT (copy session out for transfer)
-// ═══════════════════════════════════════════════════════════════
-if (MODE === "export") {
-  requireSession();
-  const dest = Bun.argv[3];
-  if (!dest) {
-    console.error("\n  Usage: phantom-canvas export <output-path>\n");
-    console.error("  Example:");
-    console.error("    phantom-canvas export ./session.json");
-    console.error("    scp ./session.json user@remote:/tmp/session.json\n");
-    process.exit(1);
-  }
-  await Bun.write(resolve(dest), Bun.file(SESSION_PATH));
-  console.log(`\n  Session exported to ${resolve(dest)}\n`);
-  process.exit(0);
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  SESSION IMPORT (for remote servers)
-// ═══════════════════════════════════════════════════════════════
-if (MODE === "import") {
-  const source = Bun.argv[3];
-  if (!source) {
-    console.error("\n  Usage: phantom-canvas import <session.json>\n");
-    console.error("  Copy a session file from another machine:\n");
-    console.error("    # On local machine:");
-    console.error("    scp ~/.phantom-canvas/session.json user@remote:/tmp/session.json\n");
-    console.error("    # On remote server:");
-    console.error("    phantom-canvas import /tmp/session.json\n");
-    process.exit(1);
-  }
-
-  if (!existsSync(resolve(source))) {
-    console.error(`\n  File not found: ${source}\n`);
-    process.exit(1);
-  }
-
-  const data = await Bun.file(resolve(source)).text();
-  // Basic validation
-  try {
-    const parsed = JSON.parse(data);
-    if (!parsed.cookies) throw new Error("invalid format");
-  } catch {
-    console.error("\n  Invalid session file — must be a Playwright storageState JSON.\n");
-    process.exit(1);
-  }
-
-  await Bun.write(SESSION_PATH, data);
-  console.log(`\n  Session imported to ${SESSION_PATH}\n`);
-  process.exit(0);
-}
-
-// ═══════════════════════════════════════════════════════════════
 //  GENERATE (CLI one-shot mode for agents)
 // ═══════════════════════════════════════════════════════════════
 if (MODE === "generate") {
-  requireSession();
+
 
   // Parse CLI args
   const prompt = Bun.argv[3];
@@ -210,7 +109,7 @@ if (MODE === "generate") {
   const conversationId = parseArg("--conversation");
 
   console.error("[phantom-canvas] Starting browser...");
-  const browser = new GeminiBrowser(SESSION_PATH, OUTPUT_DIR, !HEADED, USE_CHROME, CDP_URL);
+  const browser = new GeminiBrowser("", OUTPUT_DIR, !HEADED, CDP_URL);
   await browser.launch();
 
   console.error("[phantom-canvas] Navigating to Gemini...");
@@ -257,15 +156,15 @@ if (MODE === "generate") {
 //  SERVE (HTTP API server)
 // ═══════════════════════════════════════════════════════════════
 if (MODE === "serve") {
-  requireSession();
+
 
   showLogo();
   console.log(`  Phantom Canvas — http://localhost:${PORT}\n`);
 
-  const browser = new GeminiBrowser(SESSION_PATH, OUTPUT_DIR, !HEADED, USE_CHROME, CDP_URL);
+  const browser = new GeminiBrowser("", OUTPUT_DIR, !HEADED, CDP_URL);
   const tasks = new TaskQueue();
 
-  console.log("[INIT] Starting camoufox...");
+  console.log("[INIT] Starting browser...");
   await browser.launch();
   console.log("[INIT] Navigating to Gemini...");
   await browser.navigateToGemini();
@@ -349,8 +248,8 @@ if (MODE === "serve") {
   });
 
   app.post("/session/save", async (c) => {
-    await browser.getPage()?.context().storageState({ path: SESSION_PATH });
-    return c.json({ status: "saved", path: SESSION_PATH });
+    // Chrome mode persists via user-data-dir — no explicit save needed
+    return c.json({ status: "ok", note: "Chrome mode uses persistent profile" });
   });
 
   app.post("/debug/eval", async (c) => {
@@ -437,11 +336,8 @@ if (MODE === "serve") {
 
   Commands:
     phantom-canvas chrome                        Manually start Chrome (usually not needed)
-    phantom-canvas login                         Login to Google (camoufox mode)
     phantom-canvas generate "prompt" [options]   One-shot generation (for agents)
     phantom-canvas serve [--port 8420]           Start HTTP API server
-    phantom-canvas export <file>                  Export session for transfer
-    phantom-canvas import <file>                  Import session from another machine
 
   Generate options:
     --ref <file>          Reference image (img2img)
@@ -449,30 +345,14 @@ if (MODE === "serve") {
     -o, --output <file>   Output file path
     --conversation <id>   Continue previous conversation
     --timeout <secs>      Timeout (default: 180/300)
-    --headed              Show browser window (camoufox mode)
-    --camoufox            Use Camoufox instead of Chrome
+    --headed              Show browser window
     --cdp <url>           Chrome DevTools URL (default: http://127.0.0.1:9222)
 
   Examples:
-    # Chrome mode (default — auto-launches Chrome):
     phantom-canvas generate "pixel art knight"   # just works
     phantom-canvas serve --port 3000
 
     # First time only: login to Google in the Chrome window that opens
     # After that, everything is automatic
-
-    # Camoufox mode (alternative):
-    phantom-canvas login
-    phantom-canvas generate "prompt" --camoufox
-
-  Remote setup:
-    # On local machine (has browser):
-    phantom-canvas login
-    phantom-canvas export ./session.json
-    scp ./session.json user@remote:/tmp/session.json
-
-    # On remote server:
-    phantom-canvas import /tmp/session.json
-    phantom-canvas serve
 `);
 }

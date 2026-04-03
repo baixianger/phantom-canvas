@@ -11,7 +11,6 @@
   <a href="https://www.npmjs.com/package/phantom-canvas"><img src="https://img.shields.io/npm/dm/phantom-canvas?color=cb3837" alt="npm downloads" /></a>
   <a href="https://github.com/baixianger/phantom-canvas/blob/main/LICENSE"><img src="https://img.shields.io/github/license/baixianger/phantom-canvas" alt="license" /></a>
   <a href="https://bun.sh"><img src="https://img.shields.io/badge/runtime-Bun-f472b6?logo=bun" alt="Bun" /></a>
-  <a href="https://github.com/daijro/camoufox"><img src="https://img.shields.io/badge/browser-Camoufox-orange?logo=firefox" alt="Camoufox" /></a>
 </p>
 
 Turn the free [Gemini](https://gemini.google.com) web interface into a programmable HTTP API for image and video generation. No API keys, no billing — just your Google account.
@@ -20,15 +19,13 @@ Turn the free [Gemini](https://gemini.google.com) web interface into a programma
   <img src="https://raw.githubusercontent.com/baixianger/phantom-canvas/main/diagram.png" width="700" alt="Your App → HTTP → Phantom Canvas → browser → Gemini Web (your subscription)" />
 </p>
 
-A persistent anti-detection browser ([camoufox](https://github.com/daijro/camoufox)) runs in the background, automating Gemini's web UI. You send prompts via HTTP, Phantom Canvas handles the rest — typing, uploading reference images, waiting for generation, and downloading the result.
+A persistent Chrome browser runs in the background via CDP, automating Gemini's web UI. You send prompts via HTTP, Phantom Canvas handles the rest — typing, uploading reference images, waiting for generation, and downloading the result.
 
 Already paying for Google AI / Gemini Advanced? Turn your subscription into your own private API — save on per-call billing while keeping the same generation quality.
 
-Built with **Bun + Playwright + Hono**. Two browser backends: **Camoufox** (anti-detect Firefox) or **Chrome** (your own browser via CDP — recommended for Google).
+Built with **Bun + Playwright + Hono + Chrome CDP**.
 
 ## Quick start
-
-### Chrome mode (default)
 
 ```bash
 # 1. Install
@@ -42,31 +39,18 @@ phantom-canvas serve                 # HTTP API server
 # After that, everything is automatic — your login persists
 ```
 
-### Camoufox mode
-
-```bash
-# Use --camoufox to switch to anti-detect Firefox
-phantom-canvas login                 # login first
-phantom-canvas generate "prompt" --camoufox
-phantom-canvas serve --camoufox
-```
-
 ## Commands
 
 | Command | Description |
 |---|---|
 | `phantom-canvas chrome` | Manually start Chrome (usually not needed) |
-| `phantom-canvas login` | Login to Google (camoufox mode) |
-| `phantom-canvas generate "prompt"` | One-shot generation (Chrome by default) |
+| `phantom-canvas generate "prompt"` | One-shot generation |
 | `phantom-canvas serve` | Start HTTP API server |
-| `phantom-canvas export <file>` | Export session for transfer |
-| `phantom-canvas import <file>` | Import session from another machine |
 
 ### Generate options
 
 | Flag | Description |
 |---|---|
-| `--camoufox` | Use Camoufox instead of Chrome |
 | `--ref <file>` | Reference image (img2img) |
 | `--video` | Generate video instead of image |
 | `-o, --output <file>` | Output file path |

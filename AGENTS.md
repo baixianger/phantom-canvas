@@ -4,7 +4,7 @@ This repository is an AI agent tool for image and video generation.
 
 ## What this tool does
 
-Phantom Canvas wraps Gemini Web as a programmable API. It launches an anti-detection browser (camoufox), automates Gemini's web UI, and exposes generation capabilities via CLI and HTTP API.
+Phantom Canvas wraps Gemini Web as a programmable API. It launches Chrome via CDP, automates Gemini's web UI, and exposes generation capabilities via CLI and HTTP API.
 
 ## How to use
 
@@ -19,7 +19,7 @@ See [SKILL.md](SKILL.md) for complete agent instructions.
 ## Architecture
 
 - `index.ts` — CLI entry point (login / generate / serve / import / export)
-- `lib/browser.ts` — Browser automation (camoufox + Playwright)
+- `lib/browser.ts` — Browser automation (Chrome CDP + Playwright)
 - `lib/tasks.ts` — Async task queue
 
 ## Session

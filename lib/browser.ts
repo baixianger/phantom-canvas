@@ -1,29 +1,16 @@
 /**
- * GeminiBrowser — persistent camoufox session for Gemini image generation
+ * GeminiBrowser — persistent Chrome session for Gemini image generation
  *
  * Keeps the browser alive between requests to avoid SPA cold-start.
  * Handles: navigation, prompt input, image upload, image download.
  */
 
-import { Camoufox } from "camoufox-js";
-import { CamoufoxFetcher, INSTALL_DIR } from "camoufox-js/dist/pkgman.js";
 import type { Browser, BrowserContext, Page } from "playwright-core";
-import { existsSync, mkdirSync, readdirSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { platform } from "os";
 import type { TaskInput, TaskMedia } from "./tasks";
 type TaskImage = TaskMedia;
-
-/** Ensure camoufox browser binary is downloaded (lazy init, no postinstall needed) */
-async function ensureCamoufox() {
-  const dir = INSTALL_DIR.toString();
-  if (!existsSync(dir) || readdirSync(dir).length === 0) {
-    console.log("[SETUP] Camoufox browser not found, downloading (~80MB)...");
-    const fetcher = new CamoufoxFetcher();
-    await fetcher.install();
-    console.log("[SETUP] Camoufox ready.");
-  }
-}
 
 const GEMINI_URL = "https://gemini.google.com/app";
 const DEFAULT_CDP_URL = "http://127.0.0.1:9222";
@@ -42,7 +29,6 @@ export class GeminiBrowser {
     private sessionPath: string,
     private outputDir: string,
     private headless: boolean = true,
-    private useChrome: boolean = false,
     private cdpUrl: string = DEFAULT_CDP_URL
   ) {
     mkdirSync(outputDir, { recursive: true });
@@ -50,11 +36,7 @@ export class GeminiBrowser {
 
   /** Launch browser */
   async launch() {
-    if (this.useChrome) {
-      await this._launchChrome();
-    } else {
-      await this._launchCamoufox();
-    }
+    await this._launchChrome();
   }
 
   /** Connect to user's Chrome via CDP, auto-launching if needed */
@@ -118,49 +100,6 @@ export class GeminiBrowser {
     } else {
       this.context = await this.browser.newContext();
     }
-
-    this.page = await this.context.newPage();
-    this.ready = true;
-  }
-
-  /** Launch camoufox */
-  private async _launchCamoufox() {
-    await ensureCamoufox();
-    console.log(`[BROWSER] Launching camoufox (headless=${this.headless})...`);
-
-    // Match fingerprint OS to actual system to avoid Google security alerts
-    const osMap: Record<string, string> = { darwin: "macos", win32: "windows", linux: "linux" };
-    const os = osMap[platform()] ?? "macos";
-
-    // camoufox-js uses `window` for actual window size (not Playwright's viewport)
-    const camoufoxOpts: any = {
-      headless: this.headless,
-      os,
-      window: [1280, 900],
-      humanize: 0.5,
-      enable_cache: true,
-    };
-
-    const browserOrContext = await Camoufox(camoufoxOpts);
-
-    // Camoufox may return BrowserContext or Browser
-    if ("addCookies" in browserOrContext) {
-      const ctx = browserOrContext as unknown as BrowserContext;
-      this.browser = ctx.browser()!;
-      await ctx.close();
-    } else {
-      this.browser = browserOrContext as Browser;
-    }
-
-    const contextOpts: any = {};
-    if (existsSync(this.sessionPath)) {
-      console.log(`[BROWSER] Loading session from ${this.sessionPath}`);
-      contextOpts.storageState = this.sessionPath;
-    } else {
-      console.log("[BROWSER] No session file, starting fresh");
-    }
-
-    this.context = await this.browser.newContext(contextOpts);
 
     this.page = await this.context.newPage();
     this.ready = true;
@@ -245,13 +184,9 @@ export class GeminiBrowser {
     }
   }
 
-  /** Save current session to disk (no-op in Chrome mode) */
+  /** Save current session (no-op — Chrome uses its own profile) */
   async saveSession() {
-    if (this.useChrome) return;
-    if (this.context) {
-      await this.context.storageState({ path: this.sessionPath });
-      console.log("[BROWSER] Session saved");
-    }
+    // Chrome mode persists login via user-data-dir, no explicit save needed
   }
 
   /** Generate media (images or video) from prompt */
@@ -630,16 +565,10 @@ export class GeminiBrowser {
   }
 
   async close() {
-    if (this.useChrome) {
-      await this.page?.close().catch(() => {});
-      // CDP-connected browsers support disconnect() to leave Chrome running
-      if (this.browser && "disconnect" in this.browser) {
-        (this.browser as any).disconnect();
-      }
-    } else {
-      await this.saveSession();
-      await this.context?.close();
-      await this.browser?.close();
+    await this.page?.close().catch(() => {});
+    // CDP-connected browsers support disconnect() to leave Chrome running
+    if (this.browser && "disconnect" in this.browser) {
+      (this.browser as any).disconnect();
     }
   }
 }
