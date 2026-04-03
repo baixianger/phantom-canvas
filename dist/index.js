@@ -316,12 +316,37 @@ class GeminiBrowser {
     await page.waitForTimeout(4000);
     const ts = Date.now();
     const outPath = join(this.outputDir, `sprite_${ts}_${index}.png`);
+    const lastImg = await page.evaluateHandle(() => {
+      let last = null;
+      for (const img of document.querySelectorAll("img")) {
+        if (img.naturalWidth <= 100 || img.naturalHeight <= 100)
+          continue;
+        const src = img.src || "";
+        const alt = (img.alt || "").toLowerCase();
+        if (src.includes("googleusercontent.com/a/") || src.includes("favicon"))
+          continue;
+        if (alt.includes("upload") || alt.includes("preview") || alt.includes("forhåndsvisning"))
+          continue;
+        last = img;
+      }
+      return last;
+    });
+    if (lastImg) {
+      try {
+        await lastImg.hover();
+      } catch {}
+      await page.waitForTimeout(1000);
+    }
     const downloadBtn = page.locator('button[aria-label*="ownload"], button[aria-label*="hent"], button[aria-label*="下载"]');
     if (await downloadBtn.count() > 0) {
       try {
+        const btn = downloadBtn.last();
+        await btn.scrollIntoViewIfNeeded();
+        await btn.hover();
+        await page.waitForTimeout(500);
         const [download] = await Promise.all([
           page.waitForEvent("download", { timeout: 15000 }),
-          downloadBtn.last().click()
+          btn.click({ force: true })
         ]);
         await download.saveAs(outPath);
         console.log(`[GEN] Downloaded full-res: ${outPath}`);

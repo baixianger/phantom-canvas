@@ -417,15 +417,37 @@ export class GeminiBrowser {
     const outPath = join(this.outputDir, `sprite_${ts}_${index}.png`);
 
     // Strategy 1: Use the download button (gets full-res image)
+    // Hover the image first to reveal the download overlay
+    const lastImg = await page.evaluateHandle(() => {
+      let last: HTMLImageElement | null = null;
+      for (const img of document.querySelectorAll("img")) {
+        if (img.naturalWidth <= 100 || img.naturalHeight <= 100) continue;
+        const src = img.src || "";
+        const alt = (img.alt || "").toLowerCase();
+        if (src.includes("googleusercontent.com/a/") || src.includes("favicon")) continue;
+        if (alt.includes("upload") || alt.includes("preview") || alt.includes("forhåndsvisning")) continue;
+        last = img;
+      }
+      return last;
+    });
+    if (lastImg) {
+      try { await (lastImg as any).hover(); } catch {}
+      await page.waitForTimeout(1000);
+    }
+
     const downloadBtn = page.locator(
       'button[aria-label*="ownload"], button[aria-label*="hent"], button[aria-label*="下载"]'
     );
 
     if ((await downloadBtn.count()) > 0) {
       try {
+        const btn = downloadBtn.last();
+        await btn.scrollIntoViewIfNeeded();
+        await btn.hover();
+        await page.waitForTimeout(500);
         const [download] = await Promise.all([
           page.waitForEvent("download", { timeout: 15_000 }),
-          downloadBtn.last().click(), // last = newest image's download button
+          btn.click({ force: true }),
         ]);
         await download.saveAs(outPath);
         console.log(`[GEN] Downloaded full-res: ${outPath}`);
