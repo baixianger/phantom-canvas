@@ -1,45 +1,43 @@
 ---
 name: phantom-canvas
-description: Generate images and videos via Gemini Web using an anti-detection browser. Supports text-to-image, img2img with reference upload, multi-turn conversation, and video generation. No API keys needed — uses your Google account session.
+description: CLI tool and HTTP API for Gemini image/video generation via Chrome CDP. Text-to-image, img2img with reference upload, multi-turn conversation, video generation. No API keys — uses Chrome's persistent login. Built for AI agents.
 metadata:
   author: baixianger
-  version: 0.3.3
-  tags: [gemini, image-generation, video-generation, browser-automation, pixel-art, game-assets]
+  version: 2.0.1
+  tags: [gemini, image-generation, video-generation, browser-automation, pixel-art, game-assets, ai-agent, chrome-cdp]
   repository: https://github.com/baixianger/phantom-canvas
 allowed-tools: Bash
 ---
 
 # Phantom Canvas
 
-Generate images and videos through Gemini Web. No API keys — uses a saved Google session.
+CLI + HTTP API for image and video generation through Gemini Web. No API keys — uses Chrome's persistent Google login.
 
 ## Install
 
 ```bash
-bun install -g phantom-canvas
+bun add -g phantom-canvas    # or: npm install -g phantom-canvas
 ```
 
 ## Session
 
-Session is stored at `~/.phantom-canvas/session.json`.
+Chrome stores login in `~/.phantom-canvas/chrome-profile/`. First time use:
 
 ```bash
-# Check session
-test -f ~/.phantom-canvas/session.json && echo "ready" || echo "need login"
+# Open Chrome, login to Google in the window that opens
+phantom-canvas chrome
 
-# Login (requires browser)
-phantom-canvas login
-
-# Remote: export from local, import on server
-phantom-canvas export ./session.json
-phantom-canvas import ./session.json
+# Or just run generate — Chrome auto-launches
+phantom-canvas generate "test" --headed
 ```
 
-When you see "Session expired" or exit code 1, tell the user to run `phantom-canvas login`. Do NOT automate login — it requires human interaction with Google auth.
+Login persists across sessions. No export/import needed.
+
+When you see "Session expired", tell the user to run `phantom-canvas chrome` and re-login. Do NOT automate login — it requires human interaction with Google auth.
 
 ## CLI Generate (for agents and scripts)
 
-Output is JSON on stdout. Logs go to stderr.
+Output is JSON on stdout. Logs go to stderr. Images downloaded at full resolution (1024px).
 
 ### Text-to-Image
 
@@ -88,7 +86,8 @@ Video takes 1-2 min. Gemini has daily video quotas.
 | `--video` | Generate video instead of image |
 | `--conversation <id>` | Continue previous conversation |
 | `--timeout <secs>` | Timeout (default: 180 image, 300 video) |
-| `--headed` | Show browser window |
+| `--headed` | Show browser window (default: headless) |
+| `--cdp <url>` | Chrome DevTools URL (default: http://127.0.0.1:9222) |
 
 ## HTTP API (server mode)
 
@@ -108,11 +107,18 @@ curl localhost:8420/task/{id}
 curl localhost:8420/task/{id}/image/0 -o result.png
 ```
 
+## Tips
+
+- Use `#00FF00` green background instead of "transparent" — Gemini draws checkerboard patterns for transparent
+- Green screen is easy to chroma-key in post-processing
+- For game sprites, generate single characters first, then use `--ref` for multi-angle sheets
+- Headless mode works but may be slower — use `--headed` for faster/more reliable generation
+
 ## Error Handling
 
 | Exit code / Error | Action |
 |---|---|
-| "No session found" | Run `phantom-canvas login` |
-| "Session expired" | Run `phantom-canvas login` |
-| Empty images | Retry with different prompt |
+| Chrome failed to start | Install Chrome or set path |
+| "Session expired" | Run `phantom-canvas chrome`, re-login |
+| Timeout / empty images | Retry with different prompt or longer `--timeout` |
 | Video quota | Wait until tomorrow |

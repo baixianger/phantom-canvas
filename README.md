@@ -4,7 +4,7 @@
 
 <h1 align="center">Phantom Canvas</h1>
 
-<p align="center"><strong>Your Gemini web app as a service.</strong></p>
+<p align="center"><strong>CLI + HTTP API for Gemini image generation — built for AI agents.</strong></p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/phantom-canvas"><img src="https://img.shields.io/npm/v/phantom-canvas?color=cb3837&logo=npm" alt="npm version" /></a>
@@ -18,15 +18,19 @@
   <a href="https://github.com/baixianger/phantom-canvas/blob/main/README.zh-CN.md">中文</a>
 </p>
 
-Turn the free [Gemini](https://gemini.google.com) web interface into a programmable HTTP API for image and video generation. No API keys, no billing — just your Google account.
+Turn the free [Gemini](https://gemini.google.com) web interface into a programmable **CLI tool and HTTP API** for image and video generation. No API keys, no billing — just your Google account.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/baixianger/phantom-canvas/main/diagram.png" width="700" alt="Your App → HTTP → Phantom Canvas → browser → Gemini Web (your subscription)" />
+  <img src="https://raw.githubusercontent.com/baixianger/phantom-canvas/main/diagram.png" width="700" alt="Your App / AI Agent → CLI or HTTP → Phantom Canvas → Chrome → Gemini Web" />
 </p>
 
-A persistent Chrome browser runs in the background via CDP, automating Gemini's web UI. You send prompts via HTTP, Phantom Canvas handles the rest — typing, uploading reference images, waiting for generation, and downloading the full-resolution result.
+**Two ways to use it:**
+- **CLI** — `phantom-canvas generate "prompt" -o output.png` for scripts and AI agents
+- **HTTP API** — `phantom-canvas serve` for applications and pipelines
 
-Already paying for Google AI / Gemini Advanced? Turn your subscription into your own private API — save on per-call billing while keeping the same generation quality.
+A persistent Chrome browser runs in the background via CDP, automating Gemini's web UI. Phantom Canvas handles the rest — typing, uploading reference images, waiting for generation, and downloading the full-resolution result (1024px).
+
+Already paying for Gemini Advanced? Turn your subscription into your own private image generation API.
 
 Built with **Node.js + Playwright + Hono + Chrome CDP**.
 

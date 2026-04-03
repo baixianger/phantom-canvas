@@ -4,7 +4,7 @@
 
 <h1 align="center">Phantom Canvas</h1>
 
-<p align="center"><strong>把 Gemini 网页变成你的图片生成 API</strong></p>
+<p align="center"><strong>Gemini 图片生成的 CLI + HTTP API — 专为 AI Agent 打造</strong></p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/phantom-canvas"><img src="https://img.shields.io/npm/v/phantom-canvas?color=cb3837&logo=npm" alt="npm version" /></a>
@@ -18,15 +18,19 @@
   <a href="https://github.com/baixianger/phantom-canvas/blob/main/README.zh-CN.md">中文</a>
 </p>
 
-把免费的 [Gemini](https://gemini.google.com) 网页界面变成可编程的 HTTP API，用于图片和视频生成。无需 API 密钥、无需付费 — 只需你的 Google 账号。
+把免费的 [Gemini](https://gemini.google.com) 网页界面变成可编程的 **CLI 工具和 HTTP API**，用于图片和视频生成。无需 API 密钥、无需付费 — 只需你的 Google 账号。
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/baixianger/phantom-canvas/main/diagram.png" width="700" alt="你的应用 → HTTP → Phantom Canvas → 浏览器 → Gemini 网页（你的订阅）" />
+  <img src="https://raw.githubusercontent.com/baixianger/phantom-canvas/main/diagram.png" width="700" alt="你的应用 / AI Agent → CLI 或 HTTP → Phantom Canvas → Chrome → Gemini 网页" />
 </p>
 
-后台运行一个持久化的 Chrome 浏览器（通过 CDP），自动操作 Gemini 网页界面。你发送 prompt，Phantom Canvas 处理剩下的 — 输入文字、上传参考图、等待生成、下载全尺寸原图。
+**两种使用方式：**
+- **CLI** — `phantom-canvas generate "prompt" -o output.png` 适合脚本和 AI Agent 调用
+- **HTTP API** — `phantom-canvas serve` 适合应用和流水线集成
 
-已经在用 Google AI / Gemini Advanced？把你的订阅变成私有 API — 省掉按次计费，保持同样的生成质量。
+后台运行一个持久化的 Chrome 浏览器（通过 CDP），自动操作 Gemini 网页界面。Phantom Canvas 处理剩下的 — 输入文字、上传参考图、等待生成、下载全尺寸原图（1024px）。
+
+已经在用 Gemini Advanced？把你的订阅变成私有图片生成 API。
 
 基于 **Node.js + Playwright + Hono + Chrome CDP** 构建。
 
